@@ -1,0 +1,18 @@
+{
+    "ALICAT_CONECTADO": 0,
+    "MOTORES_CONECTADOS": 0,
+    "X_PASOS_x_UNIDAD": 80,
+    "Y_PASOS_x_UNIDAD": 80,
+    "Z_PASOS_x_UNIDAD": 80,
+    "X_MICROSTEPS": 1600,
+    "Y_MICROSTEPS": 25000,
+    "Z_MICROSTEPS": 1600,
+    "X_MM_x_REVOLUCION": 8,
+    "Z_MM_x_REVOLUCION": 8,
+    "dm": 69,
+    "dp": 42,
+    "dq": 24,
+    "alpha_flauta": 0.785398163,
+    "X_F": 189,
+    "Z_F": 104
+}
