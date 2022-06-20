@@ -9,8 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from view_control.LedIndicatorWidget import *
-from views.amci_driver_window import Ui_MainWindow as AMCIWindow
-from views.amci_driver_configuration_window import Ui_Dialog as ConfigureAMCIDriverDialog
+from views.amci_driver import Ui_MainWindow as AMCIWindow
+from views.amci_driver_configuration import Ui_Dialog as ConfigureAMCIDriverDialog
 from utils.driver_amci import AMCIDriver
 from views.assembled_move_step1 import Ui_Dialog as AssembledDialog1
 from views.assembled_move_step2 import Ui_Dialog as AssembledDialog2

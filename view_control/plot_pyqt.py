@@ -34,39 +34,48 @@ class RouteWidget(QDialog):
         self.lay.addWidget(self.canvas)
     
     def draw(self):
-        x_points, z_points, alpha_points, d = plan_route_min_error(self.ri, self.thetai, self.oi, self.rf, self.thetaf, self.of, error=0.05, plot=False)
+        #print(self.ri, self.thetai, self.oi, self.rf, self.thetaf, self.of)
+        xi, zi, alphai = get_x_z_alpha(self.ri, self.thetai, self.oi)
+        xf, zf, alphaf = get_x_z_alpha(self.rf, self.thetaf, self.of)
+
+        x_points, z_points, alpha_points, d = self.parent.parent.musician.motors_controller.get_route_positions(xi, zi, alphai, xf, zf, alphaf, divisions=16, plot=False)
         N = len(x_points)
 
-        deltaR = self.rf - self.ri
-        deltaTheta = self.thetaf - self.thetai
-        deltaO = self.of - self.oi
+        # deltaR = self.rf - self.ri
+        # deltaTheta = self.thetaf - self.thetai
+        # deltaO = self.of - self.oi
 
-        xi, zi, alphai = get_x_z_alpha(self.ri, self.thetai, self.oi)
-        x2i, z2i = get_pos_punta(xi, zi, alphai)
-        x_a, z_a, alpha_a = xi, zi, alphai
+        # xi, zi, alphai = get_x_z_alpha(self.ri, self.thetai, self.oi)
+        x2i, z2i = get_pos_punta(xi, zi, alphai*pi/180)
+        # x_a, z_a, alpha_a = xi, zi, alphai
 
-        xf, zf, alphaf = get_x_z_alpha(self.rf, self.thetaf, self.of)
-        x2f, z2f = get_pos_punta(xf, zf, alphaf)
+        # xf, zf, alphaf = get_x_z_alpha(self.rf, self.thetaf, self.of)
+        x2f, z2f = get_pos_punta(xf, zf, alphaf*pi/180)
 
-        d = 0
-        x_points = []
-        z_points = []
-        alpha_points = []
+        # d = 0
+        # x_points = []
+        # z_points = []
+        # alpha_points = []
         x2_points = []
         z2_points = []
-        for n in range(N+1):
-            xn, zn, alphan = get_x_z_alpha(self.ri + n*deltaR/N, self.thetai + n*deltaTheta/N, self.oi + n*deltaO/N)
-            #print(ri + n*deltaR/N, thetai + n*deltaTheta/N, oi + n*deltaO/N)
-            #print(get_r_theta_o(xn, zn, alphan))
-            #print(alphan)
-            x_points.append(xn)
-            z_points.append(zn)
-            alpha_points.append(alphan)
-            x2, z2 = get_pos_punta(xn, zn, alphan)
+        for n in range(N):
+            x2, z2 = get_pos_punta(x_points[n], z_points[n], alpha_points[n]*pi/180)
             x2_points.append(x2)
             z2_points.append(z2)
-            d += sqrt((xn - x_a)**2 + (zn - z_a)**2 + (alphan - alpha_a)**2)
-            x_a, z_a, alpha_a = xn, zn, alphan
+
+        # for n in range(N+1):
+        #     xn, zn, alphan = get_x_z_alpha(self.ri + n*deltaR/N, self.thetai + n*deltaTheta/N, self.oi + n*deltaO/N)
+        #     #print(ri + n*deltaR/N, thetai + n*deltaTheta/N, oi + n*deltaO/N)
+        #     #print(get_r_theta_o(xn, zn, alphan))
+        #     #print(alphan)
+        #     x_points.append(xn)
+        #     z_points.append(zn)
+        #     alpha_points.append(alphan)
+        #     x2, z2 = get_pos_punta(xn, zn, alphan)
+        #     x2_points.append(x2)
+        #     z2_points.append(z2)
+        #     d += sqrt((xn - x_a)**2 + (zn - z_a)**2 + (alphan - alpha_a)**2)
+        #     x_a, z_a, alpha_a = xn, zn, alphan
 
         self.ax.plot(x_points, z_points, color='b')
         self.ax.arrow(x_points[int(N/2)], z_points[int(N/2)], x_points[int(N/2)+1] - x_points[int(N/2)], z_points[int(N/2)+1] - z_points[int(N/2)], shape='full', lw=0, length_includes_head=True, head_width=2.5, color='b')

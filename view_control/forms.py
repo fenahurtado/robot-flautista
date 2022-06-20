@@ -3,11 +3,12 @@ import imp
 from PyQt5.QtWidgets import QDialog
 
 from views.move_edit_window import Ui_Dialog as MoveDialog
-from views.stay_edit_window import Ui_Dialog as StayDialog
-from views.start_edit_window import Ui_Dialog as StartDialog
+#from views.stay_edit_window import Ui_Dialog as StayDialog
+#from views.start_edit_window import Ui_Dialog as StartDialog
 from views.calibrate_angle_autohome import Ui_Dialog as CalibrateAngleDialog
 from views.calibrate_flute_menu import Ui_Dialog as CalibrateFlutePosDialog
-from views.dialog_flute_control import Ui_Dialog as ConfigureFluteControlDialog
+from views.dialog_control import Ui_Dialog as ConfigureFluteControlDialog
+from views.start_edit_window import Ui_Dialog as StartDialog
 from views.finger_window import Ui_Dialog as FingerDialog
 from view_control.plot_pyqt import RouteWidget, RampWidget
 from PyQt5.QtWidgets import QMessageBox
@@ -63,7 +64,6 @@ class CalibrateAngleForm(QDialog, CalibrateAngleDialog):
     def change_angle(self, value):
         self.data[0] = value
 
-
 class CalibrateFluteForm(QDialog, CalibrateFlutePosDialog):
     def __init__(self, parent=None, data=[0,0]):
         super().__init__(parent) #super(Form, self).__init__(parent)
@@ -82,23 +82,6 @@ class CalibrateFluteForm(QDialog, CalibrateFlutePosDialog):
 
     def change_f_z(self, value):
         self.data[1] = value
-
-class FingersActionForm(QDialog, FingerDialog):
-    def __init__(self, parent=None, data={'time': 1, 'note': 0}, index=-1):
-        super().__init__(parent) #super(Form, self).__init__(parent)
-        self.setupUi(self)
-        self.parent = parent
-        self.data = data
-        self.index = index
-
-        self.noteComboBox.setCurrentIndex(data['note'])
-        self.durationSpinBox.setValue(data['time'])
-
-        self.noteComboBox.currentIndexChanged.connect(partial(self.update_data,'note'))
-        self.durationSpinBox.valueChanged.connect(partial(self.update_data,'time'))
-
-    def update_data(self, tag, value):
-        self.data[tag] = value
 
 class StartActionForm(QDialog, StartDialog):
     def __init__(self, parent=None, data={'type': 0, 'r': 0, 'theta': 0,'offset': 0}):
@@ -124,6 +107,22 @@ class StartActionForm(QDialog, StartDialog):
     def change_theta(self, value):
         self.data['theta'] = value
 
+class FingersActionForm(QDialog, FingerDialog):
+    def __init__(self, parent=None, data={'time': 1, 'note': 0}, index=-1):
+        super().__init__(parent) #super(Form, self).__init__(parent)
+        self.setupUi(self)
+        self.parent = parent
+        self.data = data
+        self.index = index
+
+        self.noteComboBox.setCurrentIndex(data['note'])
+        self.durationSpinBox.setValue(data['time'])
+
+        self.noteComboBox.currentIndexChanged.connect(partial(self.update_data,'note'))
+        self.durationSpinBox.valueChanged.connect(partial(self.update_data,'time'))
+
+    def update_data(self, tag, value):
+        self.data[tag] = value
 
 class MoveActionForm(QDialog, MoveDialog):
     def __init__(self, parent=None, data={'type': 0, 'move': 0, 'time': 1.0, 'r': 0, 'theta': 0, 'offset': 0, 'jerk': 0, 'acceleration': 0, 'deceleration': 0, 'flow': 0, 'deformation': 0, 'vibrato_amp': 0, 'vibrato_freq': 0}, index=-1):
@@ -266,7 +265,7 @@ class MoveActionForm(QDialog, MoveDialog):
         #print('TO-DO: Plot movement')
 
     def plot_flow_ramp(self):
-        ri, thetai, oi, fi = self.get_last_pos()
+        ri, thetai, oi, fi, v_a, v_f = self.get_last_pos()
         if not self.ramp_window:
             self.ramp_window = RampWidget(fi, self.data['flow'], self.data['vibrato_amp'], self.data['vibrato_freq'], self.data['deformation'], self.data['time'], parent=self)
             self.ramp_window.show()
@@ -275,34 +274,3 @@ class MoveActionForm(QDialog, MoveDialog):
 
     def get_last_pos(self):
         return self.parent.get_previous_pos(self.index)
-        # i = self.index - 1
-        # while i >= 0:
-        #     w = self.parent.scoreLayout.itemAt(i).widget()
-        #     if w.id == 0:
-        #         ri = w.data['r']
-        #         thetai = w.data['theta']
-        #         oi = w.data['offset']
-        #         fi = 0
-        #         break
-        #     elif w.id == 1:
-        #         ri = w.data['r']
-        #         thetai = w.data['theta']
-        #         oi = w.data['offset']
-        #         fi = w.data['flow']
-        #         break
-        #     i -= 1
-        # return ri, thetai, oi, fi
-    
-
-class StayActionForm(QDialog, StayDialog):
-    def __init__(self, parent=None, data={'time': 1.0}):
-        super().__init__(parent) #super(Form, self).__init__(parent)
-        self.setupUi(self)
-        self.parent = parent
-        self.data = data
-
-        self.durationSpinBox.setValue(data['time'])
-        self.durationSpinBox.valueChanged.connect(self.change_duration)
-
-    def change_duration(self, value):
-        self.data['time'] = value

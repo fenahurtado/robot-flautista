@@ -15,7 +15,7 @@ from regex import D
 from utils.driver_amci import AMCIDriver
 #from regex import D
 from views.main_window import Ui_MainWindow
-from view_control.forms import FingersActionForm, MoveActionForm, StartActionForm, StayActionForm, CalibrateFluteForm, CalibrateAngleForm, ConfigureFluteControlForm
+from view_control.forms import FingersActionForm, MoveActionForm, CalibrateFluteForm, CalibrateAngleForm, ConfigureFluteControlForm, StartActionForm
 
 from view_control.collapsible_widgets import ManualMoveCollapsibleBox
 from view_control.action_display import ActionWidget
