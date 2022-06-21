@@ -100,7 +100,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.scrolled = 0
 
         self.moveBox = ManualMoveCollapsibleBox("Manual Move", parent=self, state=self.state, desired_state=self.desired_state, playing=self.musician.playing)
-        self.moveBox.stopButton.clicked.connect(self.musician.stop)
+        self.moveBox.stopButton.clicked.connect(self.stop_motors)
         self.gridLayout.addWidget(self.moveBox, 3, 0, 1, 8)
 
         self.setWindowTitle("Flutist Robot UC")
@@ -213,10 +213,10 @@ class Window(QMainWindow, Ui_MainWindow):
         '''
         if self.musician.playing.is_set():
             self.pauseButton.setText('Play')
+            self.musician.playing.clear()
             self.moveBox.enableButtons()
             while QApplication.hasPendingEvents():
                 QApplication.processEvents()
-            self.musician.playing.clear()
             self.moveBox.set_values(self.state)
 
         else:
@@ -256,9 +256,11 @@ class Window(QMainWindow, Ui_MainWindow):
 
     def stop(self):
         '''
-        Esta función se usa para detener un movimiento que se esté ejecutando
+        Esta función se usa para detener una partitura que se esté ejecutando
         '''
         #print('Stop clicked')
+        self.musician.performing.clear()
+        self.musician.playing.clear()
         self.pauseButton.hide()
         self.stopButton.hide()
         self.executeButton.show()
@@ -278,6 +280,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.moveBox.enableButtons()
         while QApplication.hasPendingEvents():
             QApplication.processEvents()
+        sleep(1)
         self.moveBox.set_values(self.state)
 
     def change_playing_initial_position(self):
@@ -637,6 +640,11 @@ class Window(QMainWindow, Ui_MainWindow):
         '''
         self.musician.motors_controller.move_alpha(value)
 
+    def stop_motors(self):
+        self.musician.stop()
+        sleep(0.4)
+        self.moveBox.set_values(self.state)
+     
     def change_flute_position(self):
         '''
         Esta función despliega una ventana para introducir la posición del bisel de la flauta. Al cambiar los valores estos quedan guardados para la próxima vez que se inicie el programa.

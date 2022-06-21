@@ -360,9 +360,18 @@ class MotorsController(threading.Thread):
         self.changeEvent.set()
 
     def home_alpha(self):
+        '''
+        Función que setea la posición actual del eje alpha como el cero
+        '''
         self.alpha_driver.request_write_preset_position(0)
 
     def move_alpha(self, value):
+        '''
+        Función que mueve el eje alpha a la posición indicada en value
+        
+        input:
+        value = posición en grados a la que se quiere mover el eje
+        '''
         units = self.alpha_angle_to_units(value)
         self.alpha_driver.request_write_absolute_move(units, programmed_speed=10000, acceleration=1000, deceleration=1000)
         self.alpha_driver.request_write_return_to_command_mode()
@@ -372,13 +381,26 @@ class MotorsController(threading.Thread):
         Función que se puede llamar desde otro thread para frenar un movimiento en acción
         '''
         self.stop_movement = True
+        if not self.x_driver.stopped:
+            self.x_driver.request_write_hold_move()
+        if not self.z_driver.stopped:
+            self.z_driver.request_write_hold_move()
+        if not self.alpha_driver.stopped:
+            self.alpha_driver.request_write_hold_move()
+        #self.changeEvent.set()
 
     def homed(self):
+        '''
+        Establece la posición actual de los tres motores como el cero
+        '''
         self.x_driver.request_write_preset_position(0)
         self.z_driver.request_write_preset_position(0)
         self.alpha_driver.request_write_preset_position(0)
 
     def reset_drivers(self):
+        '''
+        Resetea los drivers a sus configuraciones iniciales.
+        '''
         self.x_driver.request_write_reset()
         self.z_driver.request_write_reset()
         self.alpha_driver.request_write_reset()
@@ -400,6 +422,7 @@ class MotorsController(threading.Thread):
                 self.stop_movement = False
                 if not stopped:
                     sleep(0.4)
+                #self.changeEvent.clear()
             if self.changeEvent.is_set():
                 self.x_driver.request_write_reset_errors()
                 self.z_driver.request_write_reset_errors()
@@ -420,7 +443,7 @@ class MotorsController(threading.Thread):
                         self.z_ref += self.z_units_to_mm(self.route['z'][step]['pos'])
                         self.alpha_ref += self.alpha_units_to_angle(self.route['alpha'][step]['pos'])
                         if self.stop_movement:
-                            continue
+                            break
                         self.changeEvent.clear()
 
                 else:
@@ -679,9 +702,19 @@ class Player(QtCore.QThread):
         if self.initial_position:
             position = State(self.initial_position['r'], self.initial_position['theta'], self.initial_position['offset'], 0)
             self.move_to_state(position)
-            sleep(0.4)
-            while abs(self.state.r - self.initial_position['r']) > 1 or abs(self.state.theta - self.initial_position['theta']) > 1 or abs(self.state.o - self.initial_position['offset']) > 1:
-                pass
+            paused = False
+            while abs(self.state.r - self.initial_position['r']) > 0.2 or abs(self.state.theta - self.initial_position['theta']) > 0.2 or abs(self.state.o - self.initial_position['offset']) > 0.2:
+                if not self.performing.is_set():
+                    self.stop()
+                    return
+                if not self.playing.is_set():
+                    if not paused:
+                        self.stop()
+                        paused = True
+                else:
+                    if paused:
+                        self.move_to_state(position)
+                        paused = False
             self.finished_initial_positioning.emit()
 
             all_actions = []
@@ -702,34 +735,85 @@ class Player(QtCore.QThread):
             last_tf = 0
             phrase_actions_executed = 0
             finger_actions_executed = 0
+            paused = False
+            next_pos = None
             while len(all_actions) > 0:
-                if time() - t0 >= next_t:
-                    action = all_actions.pop(0)
-                    if action['type'] == 0: # si es instrucción de la frase musical
-                        self.begin_phrase_action.emit(phrase_actions_executed)
-                        self.execute_phrase_action(action)
-                        phrase_actions_executed += 1
-                        if action['ti'] + action['data']['time'] > last_tf:
-                            last_tf = action['data']['time']
-                            last_ti = action['ti']
-                        else:
-                            last_tf -= (action['ti'] - last_ti)
-                        if len(all_actions):
-                            next_t = all_actions[0]['ti']
-                    else: # si es instrucción de los dedos
-                        self.begin_finger_action.emit(finger_actions_executed)
-                        self.execute_fingers_action(action)
-                        finger_actions_executed += 1
-                        if action['ti'] + action['data']['time'] > last_tf:
-                            last_tf = action['data']['time']
-                            last_ti = action['ti']
-                        else:
-                            last_tf -= (action['ti'] - last_ti)
-                        if len(all_actions):
-                            next_t = all_actions[0]['ti']
-                else:
+                if not self.performing.is_set():
+                    self.stop()
+                    break
+                if not self.playing.is_set():
+                    if not paused:
+                        paused = True
+                        t_pause = time()
+                        self.stop()
                     sleep(0.05)
-            sleep(last_tf)
+                else:
+                    if paused:
+                        paused = False
+                        t0 += time() - t_pause
+                        if action['type'] == 0:
+                            if next_pos:
+                                position = State(next_pos['r'], next_pos['theta'], next_pos['offset'], next_pos['flow'], vibrato_freq=next_pos['vibrato_freq'], vibrato_amp=next_pos['vibrato_amp'])
+                                self.move_to_state(position)
+                                while abs(self.state.r - position.r) > 0.2 or abs(self.state.theta - position.theta) > 0.2 or abs(self.state.o - position.o) > 0.2:
+                                    if not self.performing.is_set():
+                                        self.stop()
+                                        return
+                                    if not self.playing.is_set():
+                                        if not paused:
+                                            self.stop()
+                                            t_pause = time()
+                                            paused = True
+                                    else:
+                                        if paused:
+                                            self.move_to_state(position)
+                                            paused = False
+                                t0 = time() - next_t
+                                next_pos = None
+                    if time() - t0 >= next_t:
+                        action = all_actions.pop(0)
+                        if action['type'] == 0: # si es instrucción de la frase musical
+                            self.begin_phrase_action.emit(phrase_actions_executed)
+                            next_pos = action['data']
+                            self.execute_phrase_action(action)
+                            phrase_actions_executed += 1
+                            if action['ti'] + action['data']['time'] > last_tf:
+                                last_tf = action['data']['time']
+                                last_ti = action['ti']
+                            else:
+                                last_tf -= (action['ti'] - last_ti)
+                            if len(all_actions):
+                                next_t = all_actions[0]['ti']
+                        else: # si es instrucción de los dedos
+                            self.begin_finger_action.emit(finger_actions_executed)
+                            self.execute_fingers_action(action)
+                            finger_actions_executed += 1
+                            if action['ti'] + action['data']['time'] > last_tf:
+                                last_tf = action['data']['time']
+                                last_ti = action['ti']
+                            else:
+                                last_tf -= (action['ti'] - last_ti)
+                            if len(all_actions):
+                                next_t = all_actions[0]['ti']
+                    else:
+                        sleep(0.05)
+            t0 = time()
+            paused = False
+            t_pause = 0
+            while time() - t0 < last_tf and not paused:
+                if not self.performing.is_set():
+                    self.stop()
+                    return
+                if not self.playing.is_set():
+                    if not paused:
+                        self.stop()
+                        t_pause = time()
+                        paused = True
+                else:
+                    if paused:
+                        self.move_to_state(position)
+                        t0 += time() - t_pause
+                        paused = False
 
         # print(self.phrase_instructions)
         # print(self.finger_instructions)

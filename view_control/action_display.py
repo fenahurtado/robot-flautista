@@ -106,7 +106,7 @@ class ActionWidget(QWidget):
                     edit = self.parent.add_fingers_action(pos=self.index, data=self.data)
                 else:
                     edit = self.parent.add_initial_position_action(data=self.data)
-                print(self.index, edit)
+                #print(self.index, edit)
                 if edit:
                     self.deleteLater()
                     self.context.removeItem(self.context.itemAt(self.index+1))

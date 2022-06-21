@@ -177,6 +177,7 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
         self.spinBoxFlow.setValue(state.flow)
         self.spinBoxFlowVibrato.setValue(state.vibrato_freq)
         self.spinBoxFlowVibratoAmplitude.setValue(state.vibrato_amp)
+        self.desired_state.change_state(state)
         self.changing_other = False
 
     def update_values(self):
