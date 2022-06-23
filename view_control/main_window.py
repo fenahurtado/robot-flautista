@@ -280,7 +280,8 @@ class Window(QMainWindow, Ui_MainWindow):
         self.moveBox.enableButtons()
         while QApplication.hasPendingEvents():
             QApplication.processEvents()
-        sleep(1)
+        while self.musician.moving():
+            pass
         self.moveBox.set_values(self.state)
 
     def change_playing_initial_position(self):
@@ -624,7 +625,7 @@ class Window(QMainWindow, Ui_MainWindow):
         '''
         # while(not self.player.motors_control.started):
         #     pass
-        print('TODO: Implement autohome')
+        self.musician.auto_home()
         data=[0]
         #self.alpha_driver.request_write_reset_errors()
         self.autohomeDlg = CalibrateAngleForm(parent=self, data=data)
@@ -632,7 +633,12 @@ class Window(QMainWindow, Ui_MainWindow):
         self.autohomeDlg.setWindowTitle("Choose parameters")
         self.musician.motors_controller.home_alpha()
         if self.autohomeDlg.exec():
-            self.musician.motors_controller.homed()
+            pass
+        #self.musician.motors_controller.homed()
+        self.musician.motors_controller.homed()
+        self.moveBox.set_values(self.state)
+        #self.desired_state.change_state(self.state)
+        self.musician.finish_autohome()
     
     def change_motor_angle(self, value):
         '''

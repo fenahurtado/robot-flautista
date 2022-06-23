@@ -2,7 +2,7 @@ import sys
 import threading
 from PyQt5.QtWidgets import QApplication
 
-from utils.driver_amci import AMCIDriver
+from utils.driver_amci import AMCIDriver, INPUT_FUNCTION_BITS
 from utils.microphone import Microphone
 from utils.player import Player, State
 from utils.sensores_alicat import FlowController, PreasureSensor
@@ -11,22 +11,22 @@ from view_control.main_window import Window
 
 preasure_sensor_event = threading.Event()
 preasure_sensor_event.set()
-preasure_sensor = PreasureSensor('192.168.2.100', preasure_sensor_event, connected=False)
+preasure_sensor = PreasureSensor('192.168.2.100', preasure_sensor_event, connected=True)
 preasure_sensor.start()
 
 flow_controler_event = threading.Event()
 flow_controler_event.set()
-flow_controller = FlowController('192.168.2.101', flow_controler_event, connected=False)
+flow_controller = FlowController('192.168.2.101', flow_controler_event, connected=True)
 flow_controller.start()
 
 x_event = threading.Event()
 x_event.set()
-x_driver = AMCIDriver('192.168.2.103', x_event, connected=True, starting_speed=1, verbose=False)
+x_driver = AMCIDriver('192.168.2.104', x_event, connected=True, starting_speed=100, verbose=True, input_1_function_bits=INPUT_FUNCTION_BITS['Home'])
 x_driver.start()
 
 z_event = threading.Event()
 z_event.set()
-z_driver = AMCIDriver('192.168.2.104', z_event, connected=True, starting_speed=1, verbose=False)
+z_driver = AMCIDriver('192.168.2.103', z_event, connected=True, starting_speed=100, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['Home'])
 z_driver.start()
 
 alpha_event = threading.Event()
@@ -40,7 +40,7 @@ microphone = Microphone(microphone_event)
 microphone.start()
 
 state = State(0,0,0,0)
-state.homed()  ## Cambiar despues, agregar rutina de homing!!!
+##state.homed()  ## Cambiar despues, agregar rutina de homing!!!
 
 musician_event = threading.Event()
 musician_event.set()

@@ -317,7 +317,7 @@ class MotorsController(threading.Thread):
         if self.state.is_too_close(desired_state):
             return 0
 
-        x_points, z_points, alpha_points, d = self.get_route_positions(*self.state.cart_coords(), *desired_state.cart_coords(), divisions=16, plot=False)
+        x_points, z_points, alpha_points, d = self.get_route_positions(*self.state.cart_coords(), *desired_state.cart_coords(), divisions=12, plot=False)
 
         #print(x_points)
         
@@ -364,6 +364,8 @@ class MotorsController(threading.Thread):
         Función que setea la posición actual del eje alpha como el cero
         '''
         self.alpha_driver.request_write_preset_position(0)
+        self.alpha_ref = 0
+        self.state.alpha = 0
 
     def move_alpha(self, value):
         '''
@@ -394,8 +396,14 @@ class MotorsController(threading.Thread):
         Establece la posición actual de los tres motores como el cero
         '''
         self.x_driver.request_write_preset_position(0)
+        self.x_ref = 0
+        self.state.x = 0
         self.z_driver.request_write_preset_position(0)
+        self.z_ref = 0
+        self.state.z = 0
         self.alpha_driver.request_write_preset_position(0)
+        self.alpha_ref = 0
+        self.state.alpha = 0
 
     def reset_drivers(self):
         '''
@@ -837,3 +845,26 @@ class Player(QtCore.QThread):
     def stop(self):
         self.motors_controller.stop()
         self.flow_reference_signal.stop()
+
+    def moving(self):
+        if self.motors_controller.x_driver.stopped and self.motors_controller.z_driver.stopped and self.motors_controller.alpha_driver.stopped:
+            return True
+        else:
+            return False
+
+    def auto_home(self, x=True, z=True, alpha=False):
+        if x:
+            self.motors_controller.x_driver.request_write_ccw_find_home(programmed_speed=1000, acceleration=500, deceleration=500)
+            
+        if z:
+            self.motors_controller.z_driver.request_write_ccw_find_home(programmed_speed=1000, acceleration=500, deceleration=500)
+            
+        if alpha:
+            self.motors_controller.alpha_driver.request_write_ccw_find_home(programmed_speed=1000, acceleration=500, deceleration=500)
+            
+    def finish_autohome(self):
+        self.motors_controller.x_driver.request_write_set_starting_speed(1)
+        self.motors_controller.z_driver.request_write_set_starting_speed(1)
+        #self.motors_controller.alpha_driver.request_write_set_starting_speed(1)
+
+        self.motors_controller.homed()

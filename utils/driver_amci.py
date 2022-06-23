@@ -133,12 +133,14 @@ class AMCIDriver(QtCore.QThread):
     programed_motor_current_signal = QtCore.pyqtSignal(object)
     acceleration_jerk_signal = QtCore.pyqtSignal(object)
     
-    def __init__(self, host, running, connected=True, disable_anti_resonance_bit=0, enable_stall_detection_bit=0, use_backplane_proximity_bit=0, use_encoder_bit=0, home_to_encoder_z_pulse=0, input_3_function_bits=0, input_2_function_bits=0, input_1_function_bits=0, output_functionality_bit=0, output_state_control_on_network_lost=0, output_state_on_network_lost=0, read_present_configuration=0, save_configuration=0, binary_input_format=0, binary_output_format=0, binary_endian=0, input_3_active_level=0, input_2_active_level=0, input_1_active_level=0, starting_speed=50, motors_step_turn=1000, hybrid_control_gain=0, encoder_pulses_turn=1000, idle_current_percentage=30, motor_current=30, current_loop_gain=5, verbose=False):
+    def __init__(self, host, running, connected=True, disable_anti_resonance_bit=0, enable_stall_detection_bit=0, use_backplane_proximity_bit=0, use_encoder_bit=0, home_to_encoder_z_pulse=0, input_3_function_bits=0, input_2_function_bits=0, input_1_function_bits=0, output_functionality_bit=0, output_state_control_on_network_lost=0, output_state_on_network_lost=0, read_present_configuration=0, save_configuration=0, binary_input_format=0, binary_output_format=0, binary_endian=0, input_3_active_level=0, input_2_active_level=0, input_1_active_level=0, starting_speed=50, motors_step_turn=1000, hybrid_control_gain=0, encoder_pulses_turn=1000, idle_current_percentage=30, motor_current=30, current_loop_gain=5, homing_slow_speed=200, verbose=False):
         QtCore.QThread.__init__(self)
         self.connected = connected
         self.init_params()
 
         self.initial_settings = Setting(disable_anti_resonance_bit, enable_stall_detection_bit, use_backplane_proximity_bit, use_encoder_bit, home_to_encoder_z_pulse, input_3_function_bits, input_2_function_bits, input_1_function_bits, output_functionality_bit, output_state_control_on_network_lost, output_state_on_network_lost, read_present_configuration, save_configuration, binary_input_format, binary_output_format, binary_endian, input_3_active_level, input_2_active_level, input_1_active_level, starting_speed, motors_step_turn, hybrid_control_gain, encoder_pulses_turn, idle_current_percentage, motor_current, current_loop_gain)
+
+        self.homing_settings = Setting(disable_anti_resonance_bit, enable_stall_detection_bit, use_backplane_proximity_bit, use_encoder_bit, home_to_encoder_z_pulse, input_3_function_bits, input_2_function_bits, input_1_function_bits, output_functionality_bit, output_state_control_on_network_lost, output_state_on_network_lost, read_present_configuration, save_configuration, binary_input_format, binary_output_format, binary_endian, input_3_active_level, input_2_active_level, input_1_active_level, homing_slow_speed, motors_step_turn, hybrid_control_gain, encoder_pulses_turn, idle_current_percentage, motor_current, current_loop_gain)
 
         self.verbose = verbose
 
@@ -165,6 +167,7 @@ class AMCIDriver(QtCore.QThread):
         self.changeEvent = threading.Event()
         self.changeEvent.set()
         self.configurations_poll = [self.initial_settings]
+        self.actual_settings = self.initial_settings
         self.commands_poll = []
         self.programming_assembly = False
 
@@ -384,6 +387,8 @@ class AMCIDriver(QtCore.QThread):
             self.module_ok = module_ok
             configuration_error = int(word0[2], 2)
             if configuration_error != self.configuration_error:
+                if self.verbose:
+                    print('Configuration Error')
                 self.configuration_error_signal.emit(configuration_error)
             self.configuration_error = configuration_error
             command_error = int(word0[3], 2)
@@ -422,6 +427,10 @@ class AMCIDriver(QtCore.QThread):
             at_home = int(word0[11], 2)
             if at_home != self.at_home:
                 self.at_home_signal.emit(at_home)
+                # if at_home:
+                #     print(11)
+                #     self.request_write_configuration(self.actual_settings)
+                #     self.request_write_preset_position(0)
             self.at_home = at_home
             stopped = int(word0[12], 2)
             if stopped != self.stopped:
@@ -526,40 +535,43 @@ class AMCIDriver(QtCore.QThread):
         else:
             return data // (2**16), data % (2**16)
 
-    def request_write_configuration(self, disable_anti_resonance_bit=0, enable_stall_detection_bit=0, use_backplane_proximity_bit=0, use_encoder_bit=0, home_to_encoder_z_pulse=0, input_3_function_bits=0, input_2_function_bits=0, input_1_function_bits=0, output_functionality_bit=0, output_state_control_on_network_lost=0, output_state_on_network_lost=0, read_present_configuration=0, save_configuration=0, binary_input_format=0, binary_output_format=0, binary_endian=0, input_3_active_level=0, input_2_active_level=0, input_1_active_level=0, starting_speed=50, motors_step_turn=1000, hybrid_control_gain=0, encoder_pulses_turn=1000, idle_current_percentage=30, motor_current=30, current_loop_gain=5):
+    def request_write_configuration(self, setting=None, disable_anti_resonance_bit=0, enable_stall_detection_bit=0, use_backplane_proximity_bit=0, use_encoder_bit=0, home_to_encoder_z_pulse=0, input_3_function_bits=0, input_2_function_bits=0, input_1_function_bits=0, output_functionality_bit=0, output_state_control_on_network_lost=0, output_state_on_network_lost=0, read_present_configuration=0, save_configuration=0, binary_input_format=0, binary_output_format=0, binary_endian=0, input_3_active_level=0, input_2_active_level=0, input_1_active_level=0, starting_speed=50, motors_step_turn=1000, hybrid_control_gain=0, encoder_pulses_turn=1000, idle_current_percentage=30, motor_current=30, current_loop_gain=5, save_local=True):
         
-        setting = Setting()
+        if setting is None:
+            setting = Setting()
 
-        setting.desired_mode_select_bit = 1
-        setting.desired_disable_anti_resonance_bit = disable_anti_resonance_bit
-        setting.desired_enable_stall_detection_bit = enable_stall_detection_bit
-        setting.desired_use_backplane_proximity_bit = use_backplane_proximity_bit
-        setting.desired_use_encoder_bit = use_encoder_bit
-        setting.desired_home_to_encoder_z_pulse = home_to_encoder_z_pulse
-        setting.desired_input_3_function_bits = input_3_function_bits
-        setting.desired_input_2_function_bits = input_2_function_bits
-        setting.desired_input_1_function_bits = input_1_function_bits
+            setting.desired_mode_select_bit = 1
+            setting.desired_disable_anti_resonance_bit = disable_anti_resonance_bit
+            setting.desired_enable_stall_detection_bit = enable_stall_detection_bit
+            setting.desired_use_backplane_proximity_bit = use_backplane_proximity_bit
+            setting.desired_use_encoder_bit = use_encoder_bit
+            setting.desired_home_to_encoder_z_pulse = home_to_encoder_z_pulse
+            setting.desired_input_3_function_bits = input_3_function_bits
+            setting.desired_input_2_function_bits = input_2_function_bits
+            setting.desired_input_1_function_bits = input_1_function_bits
 
-        setting.desired_output_functionality_bit = output_functionality_bit
-        setting.desired_output_state_control_on_network_lost = output_state_control_on_network_lost
-        setting.desired_output_state_on_network_lost = output_state_on_network_lost
-        setting.desired_read_present_configuration = read_present_configuration
-        setting.desired_save_configuration = save_configuration
-        setting.desired_binary_input_format = binary_input_format
-        setting.desired_binary_output_format = binary_output_format
-        setting.desired_binary_endian = binary_endian
-        setting.desired_input_3_active_level = input_3_active_level
-        setting.desired_input_2_active_level = input_2_active_level
-        setting.desired_input_1_active_level = input_1_active_level
+            setting.desired_output_functionality_bit = output_functionality_bit
+            setting.desired_output_state_control_on_network_lost = output_state_control_on_network_lost
+            setting.desired_output_state_on_network_lost = output_state_on_network_lost
+            setting.desired_read_present_configuration = read_present_configuration
+            setting.desired_save_configuration = save_configuration
+            setting.desired_binary_input_format = binary_input_format
+            setting.desired_binary_output_format = binary_output_format
+            setting.desired_binary_endian = binary_endian
+            setting.desired_input_3_active_level = input_3_active_level
+            setting.desired_input_2_active_level = input_2_active_level
+            setting.desired_input_1_active_level = input_1_active_level
 
-        setting.desired_starting_speed = starting_speed
-        setting.desired_motors_step_turn = motors_step_turn
-        setting.desired_hybrid_control_gain = hybrid_control_gain
-        setting.desired_encoder_pulses_turn = encoder_pulses_turn
-        setting.desired_idle_current_percentage = idle_current_percentage
-        setting.desired_motor_current = motor_current
-        setting.desired_current_loop_gain = current_loop_gain
+            setting.desired_starting_speed = starting_speed
+            setting.desired_motors_step_turn = motors_step_turn
+            setting.desired_hybrid_control_gain = hybrid_control_gain
+            setting.desired_encoder_pulses_turn = encoder_pulses_turn
+            setting.desired_idle_current_percentage = idle_current_percentage
+            setting.desired_motor_current = motor_current
+            setting.desired_current_loop_gain = current_loop_gain
 
+        if save_local:
+            self.actual_settings = setting
         self.configurations_poll.append(setting)
         self.changeEvent.set()
 
@@ -587,6 +599,13 @@ class AMCIDriver(QtCore.QThread):
         #print(f'@4/150/3=(UINT){word0},{word1},{word2},{word3},{word4},{word5},{word6},{word7},{word8},{word9}')
         with self.via:
             data, = self.via.read( [(f'@4/150/3=(INT){word0},{word1},{word2},{word3},{word4},{word5},{word6},{word7},{word8},{word9}', ("INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT"))])
+
+    def request_write_set_starting_speed(self, starting_speed):
+        #self.request_write_configuration(disable_anti_resonance_bit=self.disable_anti_resonance_bit, enable_stall_detection_bit=self.enable_stall_detection_bit, use_backplane_proximity_bit=self.use_backplane_proximity_bit, use_encoder_bit=self.use_encoder_bit, home_to_encoder_z_pulse=self.home_to_encoder_z_pulse, input_3_function_bits=self.input_3_function_bits, input_2_function_bits=self.input_2_function_bits, input_1_function_bits=self.input_1_function_bits, output_functionality_bit=self.output_functionality_bit, output_state_control_on_network_lost=self.output_state_control_on_network_lost, output_state_on_network_lost=self.output_state_on_network_lost, read_present_configuration=self.read_present_configuration, save_configuration=self.save_configuration, binary_input_format=self.binary_input_format, binary_output_format=self.binary_output_format, binary_endian=self.binary_endian, input_3_active_level=self.input_3_active_level, input_2_active_level=self.input_2_active_level, input_1_active_level=self.input_1_active_level, starting_speed=starting_speed, motors_step_turn=self.motors_step_turn, hybrid_control_gain=self.hybrid_control_gain, encoder_pulses_turn=self.encoder_pulses_turn, idle_current_percentage=self.idle_current_percentage, motor_current=self.motor_current, current_loop_gain=self.current_loop_gain)
+        self.actual_settings.desired_starting_speed = starting_speed
+        self.configurations_poll.append(self.actual_settings)
+        self.changeEvent.set()
+        sleep(0.5)
 
     def write_command(self, command):
         word0 = f'{command.desired_mode_select_bit}{command.desired_preset_encoder}{command.desired_run_assembled_move}{command.desired_read_assembled_data}{command.desired_program_assembled}{command.desired_reset_errors}{command.desired_preset_motor_position}{command.desired_jog_ccw}{command.desired_jog_cw}{command.desired_find_home_ccw}{command.desired_find_home_cw}{command.desired_immediate_stop}{command.desired_resume_move}{command.desired_hold_move}{command.desired_relative_move}{command.desired_absolute_move}'
@@ -681,6 +700,8 @@ class AMCIDriver(QtCore.QThread):
         self.changeEvent.set()
 
     def request_write_cw_find_home(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
+        #self.request_write_configuration(setting=self.homing_settings, save_local=False)
+
         command = Command(find_home_cw=1, name='CW Find Home')
         command.desired_command_word_4 = programmed_speed // 1000
         command.desired_command_word_5 = programmed_speed  % 1000
@@ -693,6 +714,9 @@ class AMCIDriver(QtCore.QThread):
         self.changeEvent.set()
 
     def request_write_ccw_find_home(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
+        #self.request_write_configuration(setting=self.homing_settings, save_local=False)
+        #sleep(1)
+        #self.request_write_return_to_command_mode()
         command = Command(find_home_ccw=1, name='CCW FFind Home')
         command.desired_command_word_4 = programmed_speed // 1000
         command.desired_command_word_5 = programmed_speed  % 1000
@@ -740,7 +764,7 @@ class AMCIDriver(QtCore.QThread):
             command.desired_jog_ccw = 1
         
         # if word1 >= 2**15:
-        #     word1 -= 2**16
+        #     word1 -= 2**16request_write_reset
 
         if position < 0:
             pos_in_bits = "{0:b}".format(0).zfill(32)
@@ -835,6 +859,8 @@ class AMCIDriver(QtCore.QThread):
         self.changeEvent.set()
 
     def request_write_reset(self):
+        if self.verbose:
+            print('Reset')
         self.configurations_poll.append(self.initial_settings)
         self.changeEvent.set()
 
