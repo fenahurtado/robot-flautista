@@ -854,17 +854,19 @@ class Player(QtCore.QThread):
 
     def auto_home(self, x=True, z=True, alpha=False):
         if x:
-            self.motors_controller.x_driver.request_write_ccw_find_home(programmed_speed=1000, acceleration=500, deceleration=500)
-            
+            #self.motors_controller.x_driver.request_write_ccw_find_home(programmed_speed=1000, acceleration=500, deceleration=500)
+            self.motors_controller.x_driver.request_write_ccw_find_home_to_limit()
+            pass
         if z:
-            self.motors_controller.z_driver.request_write_ccw_find_home(programmed_speed=1000, acceleration=500, deceleration=500)
-            
+            #self.motors_controller.z_driver.request_write_ccw_find_home(programmed_speed=1000, acceleration=500, deceleration=500)
+            self.motors_controller.z_driver.request_write_ccw_find_home_to_limit()
+            pass
         if alpha:
-            self.motors_controller.alpha_driver.request_write_ccw_find_home(programmed_speed=1000, acceleration=500, deceleration=500)
+            self.motors_controller.alpha_driver.request_write_ccw_find_home_to_limit()
             
     def finish_autohome(self):
-        self.motors_controller.x_driver.request_write_set_starting_speed(1)
-        self.motors_controller.z_driver.request_write_set_starting_speed(1)
+        #self.motors_controller.x_driver.request_write_set_starting_speed(1)
+        #self.motors_controller.z_driver.request_write_set_starting_speed(1)
         #self.motors_controller.alpha_driver.request_write_set_starting_speed(1)
 
         self.motors_controller.homed()

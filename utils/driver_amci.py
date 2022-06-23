@@ -170,6 +170,8 @@ class AMCIDriver(QtCore.QThread):
         self.actual_settings = self.initial_settings
         self.commands_poll = []
         self.programming_assembly = False
+        self.fast_ccw_limit_homing = False
+        self.slow_ccw_limit_homing = False
 
         #self.to_sgn_int = lambda block: int(block[1:16], 2)-2**15*int(block[0])
 
@@ -397,6 +399,21 @@ class AMCIDriver(QtCore.QThread):
             self.command_error = command_error
             input_error = int(word0[4], 2)
             if input_error != self.input_error:
+                if input_error:
+                    if self.fast_ccw_limit_homing:
+                        self.request_write_reset_errors()
+                        self.fast_ccw_limit_homing = False
+                        self.slow_ccw_limit_homing = True
+                        steps = [{'pos': 1000, 'speed': 500, 'acc': 100, 'dec': 100, 'jerk': 0}, 
+                                 {'pos': -1000, 'speed': 200, 'acc': 100, 'dec': 100, 'jerk': 0}]
+                        self.request_program_run_assembled_move(steps, dwell_move=1, dwell_time=100)
+                        # self.request_write_relative_move(target_position=1000, programmed_speed=500)
+                        # self.request_write_ccw_jog(programmed_speed=200)
+                        print('Step 1')
+                    elif self.slow_ccw_limit_homing:
+                        self.request_write_reset_errors()
+                        self.slow_ccw_limit_homing = False
+                        self.request_write_preset_position(0)
                 self.input_error_signal.emit(input_error)
             self.input_error = input_error
             position_invalid = int(word0[5], 2)
@@ -698,6 +715,10 @@ class AMCIDriver(QtCore.QThread):
 
         self.commands_poll.append(command)
         self.changeEvent.set()
+
+    def request_write_ccw_find_home_to_limit(self):
+        self.fast_ccw_limit_homing = True
+        self.request_write_ccw_jog(programmed_speed=1000)
 
     def request_write_cw_find_home(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
         #self.request_write_configuration(setting=self.homing_settings, save_local=False)

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from view_control.LedIndicatorWidget import *
 from views.amci_driver import Ui_MainWindow as AMCIWindow
 from views.amci_driver_configuration import Ui_Dialog as ConfigureAMCIDriverDialog
-from utils.driver_amci import AMCIDriver
+from utils.driver_amci import INPUT_FUNCTION_BITS, AMCIDriver
 from views.assembled_move_step1 import Ui_Dialog as AssembledDialog1
 from views.assembled_move_step2 import Ui_Dialog as AssembledDialog2
 
@@ -1051,8 +1051,13 @@ class AMCIWidget(QMainWindow, AMCIWindow):
         self.moving_cw_status.led.setChecked(value)
 
 def main():
+    z_event = threading.Event()
+    z_event.set()
+    z_driver = AMCIDriver('192.168.2.103', z_event, connected=True, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'])
+    z_driver.start()
+
     app = QApplication(sys.argv)
-    window = AMCIWidget('192.168.2.104')
+    window = AMCIWidget(z_driver)
     window.show()
     app.exec_()
 
