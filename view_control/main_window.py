@@ -215,8 +215,8 @@ class Window(QMainWindow, Ui_MainWindow):
             self.pauseButton.setText('Play')
             self.musician.playing.clear()
             self.moveBox.enableButtons()
-            while QApplication.hasPendingEvents():
-                QApplication.processEvents()
+            # while QApplication.hasPendingEvents():
+            #     QApplication.processEvents()
             self.moveBox.set_values(self.state)
 
         else:
@@ -278,8 +278,8 @@ class Window(QMainWindow, Ui_MainWindow):
             self.fingersScoreLayout.itemAt(index).widget().enable_context_menu()
             self.fingersScoreLayout.itemAt(index).widget().paint_blue()
         self.moveBox.enableButtons()
-        while QApplication.hasPendingEvents():
-            QApplication.processEvents()
+        # while QApplication.hasPendingEvents():
+        #     QApplication.processEvents()
         while self.musician.moving():
             pass
         self.moveBox.set_values(self.state)
@@ -482,8 +482,8 @@ class Window(QMainWindow, Ui_MainWindow):
                         for act in finger_actions:
                             self.add_fingers_action(a=0, pos=index, data=act, dialog=False)
                             index += 1
-                        while QApplication.hasPendingEvents():
-                            QApplication.processEvents()
+                        # while QApplication.hasPendingEvents():
+                        #     QApplication.processEvents()
                         self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
                         self.filename = fname
                         self.changes_saved()
@@ -669,7 +669,7 @@ class Window(QMainWindow, Ui_MainWindow):
         '''
         for index in range(self.fingersScoreLayout.count()):
             self.fingersScoreLayout.itemAt(index).widget().index = index
-            QApplication.processEvents()
+            # QApplication.processEvents()
 
     def updateIndexes(self):
         '''
@@ -678,7 +678,7 @@ class Window(QMainWindow, Ui_MainWindow):
         #print('Count:', self.scoreLayout.count())
         for index in range(self.scoreLayout.count()):
             self.scoreLayout.itemAt(index).widget().index = index
-            QApplication.processEvents()
+            # QApplication.processEvents()
 
     def add_initial_position_action(self, data=None, dialog=True):
         '''
@@ -698,8 +698,8 @@ class Window(QMainWindow, Ui_MainWindow):
             #self.phrase_actions.insert(0, {'type': 0, 'data': data})
             #self.finger_actions.insert(0, {'note': data['key']})
             self.initial_position = data
-            while QApplication.hasPendingEvents():
-                QApplication.processEvents()
+            # while QApplication.hasPendingEvents():
+            #     QApplication.processEvents()
             self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
             self.fingersActionButton.show()
             self.addActionButton.show()
@@ -728,8 +728,8 @@ class Window(QMainWindow, Ui_MainWindow):
             self.fingerActionsCount += 1
             self.fingersScoreLayout.insertWidget(pos, newAction)
             self.finger_actions.insert(pos, data)
-            while QApplication.hasPendingEvents():
-                QApplication.processEvents()
+            # while QApplication.hasPendingEvents():
+            #     QApplication.processEvents()
             self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
             self.changes_to_save()
 
@@ -765,8 +765,8 @@ class Window(QMainWindow, Ui_MainWindow):
             self.actionsCount += 1
             self.scoreLayout.insertWidget(pos, newAction)
             self.phrase_actions.insert(pos, data)
-            while QApplication.hasPendingEvents():
-                QApplication.processEvents()
+            # while QApplication.hasPendingEvents():
+            #     QApplication.processEvents()
             self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
             self.changes_to_save()
 

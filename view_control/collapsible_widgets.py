@@ -104,7 +104,7 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
         self.gridLayout.addWidget(self.spinBoxAngle, 2, 1, 1, 1)
         self.labelR = QtWidgets.QLabel("Radius:")
         self.spinBoxR = QtWidgets.QDoubleSpinBox()
-        self.spinBoxR.setMaximum(150)
+        self.spinBoxR.setMaximum(250)
         self.labelTheta = QtWidgets.QLabel("Theta:")
         self.spinBoxTheta = QtWidgets.QDoubleSpinBox()
         self.spinBoxTheta.setMaximum(180)

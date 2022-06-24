@@ -409,7 +409,7 @@ class AMCIDriver(QtCore.QThread):
                         self.request_program_run_assembled_move(steps, dwell_move=1, dwell_time=100)
                         # self.request_write_relative_move(target_position=1000, programmed_speed=500)
                         # self.request_write_ccw_jog(programmed_speed=200)
-                        print('Step 1')
+                        # print('Step 1')
                     elif self.slow_ccw_limit_homing:
                         self.request_write_reset_errors()
                         self.slow_ccw_limit_homing = False

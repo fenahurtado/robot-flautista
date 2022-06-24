@@ -77,8 +77,8 @@ class ActionWidget(QWidget):
                         self.parent.phrase_actions.pop(self.index)
                         self.parent.actionsCount -= 1
                         self.parent.updateIndexes()
-                    while QApplication.hasPendingEvents():
-                        QApplication.processEvents()
+                    # while QApplication.hasPendingEvents():
+                    #     QApplication.processEvents()
                     
                     
                 elif action == self.addBefore:
@@ -87,8 +87,8 @@ class ActionWidget(QWidget):
                     else:
                         add = self.parent.add_fingers_action(pos=self.index)
                     if add:
-                        while QApplication.hasPendingEvents():
-                            QApplication.processEvents()
+                        # while QApplication.hasPendingEvents():
+                        #     QApplication.processEvents()
                         self.parent.updateIndexes()
                 elif action == self.addAfter:
                     if self.data['type'] != 2:
@@ -96,8 +96,8 @@ class ActionWidget(QWidget):
                     else:
                         add = self.parent.add_fingers_action(pos=self.index+1)
                     if add:
-                        while QApplication.hasPendingEvents():
-                            QApplication.processEvents()
+                        # while QApplication.hasPendingEvents():
+                        #     QApplication.processEvents()
                         self.parent.updateIndexes()
             if action == self.editAct:
                 if self.data['type'] == 1:
@@ -110,8 +110,8 @@ class ActionWidget(QWidget):
                 if edit:
                     self.deleteLater()
                     self.context.removeItem(self.context.itemAt(self.index+1))
-                    while QApplication.hasPendingEvents():
-                        QApplication.processEvents()
+                    # while QApplication.hasPendingEvents():
+                    #     QApplication.processEvents()
                     if self.data['type'] == 2:
                         self.parent.finger_actions.pop(self.index+1)
                         self.parent.fingerActionsCount -= 1
