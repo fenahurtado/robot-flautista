@@ -467,6 +467,7 @@ class Window(QMainWindow, Ui_MainWindow):
             if not fname:
                 fname, _ = QFileDialog.getOpenFileName(self, 'Open file', self.base_path,"JSON files (*.json)")
             try:
+                self.clean_score()
                 with open(fname) as json_file:
                     data = json.load(json_file)
                     try:
