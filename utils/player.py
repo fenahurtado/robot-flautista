@@ -808,7 +808,6 @@ class Player(QtCore.QThread):
             t0 = time()
             paused = False
             t_pause = 0
-            print('Last step')
             while time() - t0 < last_tf and not paused:
                 if not self.performing.is_set():
                     self.stop()
@@ -823,7 +822,6 @@ class Player(QtCore.QThread):
                         self.move_to_state(position)
                         t0 += time() - t_pause
                         paused = False
-            print('Done')
         # print(self.phrase_instructions)
         # print(self.finger_instructions)
 
