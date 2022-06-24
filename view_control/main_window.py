@@ -297,10 +297,14 @@ class Window(QMainWindow, Ui_MainWindow):
 
     def finished_score(self):
         if self.scoreLayout.count():
+            print(1)
             self.scoreLayout.itemAt(self.scoreLayout.count()-1).widget().paint_blue()
         if self.fingersScoreLayout.count():
+            print(2)
             self.fingersScoreLayout.itemAt(self.fingersScoreLayout.count()-1).widget().paint_blue()
+        print(3)
         self.stop()
+        print(4)
 
     def change_playing_phrase_act(self, value):
         '''

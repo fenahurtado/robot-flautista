@@ -808,6 +808,7 @@ class Player(QtCore.QThread):
             t0 = time()
             paused = False
             t_pause = 0
+            print('Last step')
             while time() - t0 < last_tf and not paused:
                 if not self.performing.is_set():
                     self.stop()
@@ -822,7 +823,7 @@ class Player(QtCore.QThread):
                         self.move_to_state(position)
                         t0 += time() - t_pause
                         paused = False
-
+            print('Done')
         # print(self.phrase_instructions)
         # print(self.finger_instructions)
 
@@ -847,7 +848,11 @@ class Player(QtCore.QThread):
         self.flow_reference_signal.stop()
 
     def moving(self):
-        if self.motors_controller.x_driver.stopped and self.motors_controller.z_driver.stopped and self.motors_controller.alpha_driver.stopped:
+        moving_x = self.motors_controller.x_driver.moving_cw or self.motors_controller.x_driver.moving_ccw
+        moving_z = self.motors_controller.z_driver.moving_cw or self.motors_controller.z_driver.moving_ccw
+        moving_alpha = self.motors_controller.alpha_driver.moving_cw or self.motors_controller.alpha_driver.moving_ccw
+
+        if moving_x or moving_z or moving_alpha:
             return True
         else:
             return False

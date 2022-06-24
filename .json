@@ -1,0 +1,27 @@
+{
+    "fingers": [],
+    "init_pos": {
+        "offset": 138.0,
+        "r": 160.02,
+        "theta": 45.0,
+        "type": 0
+    },
+    "phrase": [
+        {
+            "acceleration": 0,
+            "deceleration": 0,
+            "deformation": 1,
+            "flow": 10.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": 138.0,
+            "r": 160.02,
+            "theta": 45.0,
+            "time": 1.0,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        }
+    ],
+    "timestamp": "24/06/2022 15:54:09"
+}

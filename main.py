@@ -22,7 +22,7 @@ flow_controller.start()
 
 x_event = threading.Event()
 x_event.set()
-x_driver = AMCIDriver('192.168.2.104', x_event, connected=connected, starting_speed=1, verbose=True, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'])#, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'])
+x_driver = AMCIDriver('192.168.2.104', x_event, connected=connected, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'])#, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'])
 x_driver.start()
 
 z_event = threading.Event()
