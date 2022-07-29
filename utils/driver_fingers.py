@@ -93,8 +93,9 @@ class FingersDriver(QtCore.QThread):
         self.connected = connected
 
         # Variables de músico
-        self.state = '000000000'
+        self.instrument = instrument
         self.note_dict = instrument_dicts[instrument]
+        self.state = '000000000'
 
         # Configura evento de cambio
         self.changeEvent = threading.Event()

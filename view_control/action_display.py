@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import (
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from PyQt5.QtCore import QEventLoop, Qt
 
+
 class ActionWidget(QWidget):
     def __init__(self, data, label, width=5, parent=None, context=None, index=0):
         super(ActionWidget, self).__init__(parent)
@@ -20,6 +21,7 @@ class ActionWidget(QWidget):
         main_layout = QGridLayout()
         #main_layout.SetFixedSize(130)
         self.setLayout(main_layout)
+        print(f'Width = {self.width}')
         self.setFixedWidth(int(100*self.width-6))
         #self.setFixedHeight(300)
         

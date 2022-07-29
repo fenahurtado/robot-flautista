@@ -839,6 +839,7 @@ class Window(QMainWindow, Ui_MainWindow):
         """
         self.musician.set_instrument(self.instrument_dialog.comboBox.itemText(value).lower())
 
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 

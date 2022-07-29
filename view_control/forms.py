@@ -129,7 +129,10 @@ class FingersActionForm(QDialog, FingerDialog):
         self.durationSpinBox.valueChanged.connect(partial(self.update_data, 'time'))
 
     def update_data(self, tag, value):
-        self.data[tag] = self.noteComboBox.itemText(value)
+        if tag == 'note':
+            self.data['note'] = self.noteComboBox.itemText(value)
+        elif tag == 'time':
+            self.data['time'] = value
 
 
 class MoveActionForm(QDialog, MoveDialog):
