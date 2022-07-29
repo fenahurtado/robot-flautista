@@ -1,0 +1,5 @@
+.idea/
+utils/__pycache__/
+view_control/__pycache__/
+views/__pycache__/
+
