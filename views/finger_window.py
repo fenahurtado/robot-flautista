@@ -9,10 +9,11 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from utils.driver_fingers import instrument_dicts
 
 
 class Ui_Dialog(object):
-    def setupUi(self, Dialog):
+    def setupUi(self, Dialog, instrument='flute'):
         Dialog.setObjectName("Dialog")
         Dialog.resize(283, 170)
         self.gridLayout = QtWidgets.QGridLayout(Dialog)
@@ -23,18 +24,13 @@ class Ui_Dialog(object):
         self.noteComboBox = QtWidgets.QComboBox(Dialog)
         self.noteComboBox.setEnabled(True)
         self.noteComboBox.setObjectName("noteComboBox")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
-        self.noteComboBox.addItem("")
+
+        # Revisa notas disponibles dependiendo del instrumento
+        self.available_notes = instrument_dicts[instrument].keys()
+
+        for _ in self.available_notes:
+            self.noteComboBox.addItem("")
+
         self.gridLayout.addWidget(self.noteComboBox, 0, 1, 1, 1)
         self.label_5 = QtWidgets.QLabel(Dialog)
         self.label_5.setObjectName("label_5")
@@ -59,16 +55,8 @@ class Ui_Dialog(object):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.label_7.setText(_translate("Dialog", "Note"))
-        self.noteComboBox.setItemText(0, _translate("Dialog", "A"))
-        self.noteComboBox.setItemText(1, _translate("Dialog", "A#"))
-        self.noteComboBox.setItemText(2, _translate("Dialog", "B"))
-        self.noteComboBox.setItemText(3, _translate("Dialog", "C"))
-        self.noteComboBox.setItemText(4, _translate("Dialog", "C#"))
-        self.noteComboBox.setItemText(5, _translate("Dialog", "D"))
-        self.noteComboBox.setItemText(6, _translate("Dialog", "D#"))
-        self.noteComboBox.setItemText(7, _translate("Dialog", "E"))
-        self.noteComboBox.setItemText(8, _translate("Dialog", "F"))
-        self.noteComboBox.setItemText(9, _translate("Dialog", "F#"))
-        self.noteComboBox.setItemText(10, _translate("Dialog", "G"))
-        self.noteComboBox.setItemText(11, _translate("Dialog", "G#"))
+
+        for i, note in enumerate(self.available_notes):
+            self.noteComboBox.setItemText(i, _translate("Dialog", note))
+
         self.label_5.setText(_translate("Dialog", "Duration"))

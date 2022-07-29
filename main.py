@@ -4,11 +4,12 @@ from PyQt5.QtWidgets import QApplication
 
 from utils.driver_amci import AMCIDriver, INPUT_FUNCTION_BITS
 from utils.microphone import Microphone
+from utils.driver_fingers import FingersDriver
 from utils.player import Player, State
 from utils.sensores_alicat import FlowController, PreasureSensor
 from view_control.main_window import Window
 
-connected = True
+connected = False
 
 preasure_sensor_event = threading.Event()
 preasure_sensor_event.set()
@@ -40,17 +41,25 @@ microphone_event.set()
 microphone = Microphone(microphone_event)
 #microphone.start()
 
-state = State(0,0,0,0)
+# Funcionalidad de servos para presionar las llaves
+fingers_event = threading.Event()
+fingers_event.set()
+fingers_driver = FingersDriver('/dev/cu.usbmodem1414401', fingers_event, connected=True)
+fingers_driver.start()
+
+state = State(0, 0, 0, 0)
 ##state.homed()  ## Cambiar despues, agregar rutina de homing!!!
 
 musician_event = threading.Event()
 musician_event.set()
-musician = Player(musician_event, state, flow_controller, preasure_sensor, x_driver, z_driver, alpha_driver, microphone)
+musician = Player(musician_event, state, flow_controller, preasure_sensor, x_driver, z_driver, alpha_driver,
+                  microphone, fingers_driver)
 musician.start()
 
 app = QApplication(sys.argv)
 
-win = Window(app, preasure_sensor_event, flow_controler_event, x_event, z_event, alpha_event, microphone_event, musician_event, musician, state)
+win = Window(app, preasure_sensor_event, flow_controler_event, x_event, z_event, alpha_event, microphone_event,
+             fingers_event, musician_event, musician, state)
 
 win.show()
 

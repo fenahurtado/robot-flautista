@@ -15,7 +15,8 @@ from regex import D
 from utils.driver_amci import AMCIDriver
 #from regex import D
 from views.main_window import Ui_MainWindow
-from view_control.forms import FingersActionForm, MoveActionForm, CalibrateFluteForm, CalibrateAngleForm, ConfigureFluteControlForm, StartActionForm
+from view_control.forms import FingersActionForm, MoveActionForm, CalibrateFluteForm, CalibrateAngleForm, \
+    ConfigureFluteControlForm, StartActionForm, InstrumentForm
 
 from view_control.collapsible_widgets import ManualMoveCollapsibleBox
 from view_control.action_display import ActionWidget
@@ -44,11 +45,13 @@ from pybase64 import b64decode
 from datetime import date, datetime
 from numpy import *
 
+
 class Window(QMainWindow, Ui_MainWindow):
     '''
     Esta clase conecta los elementos de la GUI principal con todas las funciones que se quieren realizar con el robot.
     '''
-    def __init__(self, app, preasure_sensor_event, flow_controler_event, x_event, z_event, alpha_event, microphone_event, musician_event, musician, state, parent=None):
+    def __init__(self, app, preasure_sensor_event, flow_controler_event, x_event, z_event, alpha_event,
+                 microphone_event, fingers_event, musician_event, musician, state, parent=None):
         super().__init__(parent)
         self.setupUi(self)
         self.app = app
@@ -89,6 +92,7 @@ class Window(QMainWindow, Ui_MainWindow):
         #self.alpha_driver = self.musician.alpha_drive
         self.microphone_event = microphone_event
         #self.microphone = self.musician.microphone
+        self.fingers_event = fingers_event
 
         self.initial_position = None
         self.phrase_actions = []
@@ -111,6 +115,10 @@ class Window(QMainWindow, Ui_MainWindow):
         
         self.autohome_routine()
 
+        # Selección de instrumento
+        self.instrument_dialog = None
+        self.select_instrument()
+
         self.musician.recorder.start()
 
     def closeEvent(self, a0: QtGui.QCloseEvent):
@@ -127,6 +135,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.z_event.clear()
         self.alpha_event.clear()
         self.microphone_event.clear()
+        self.fingers_event.clear()
         return super().closeEvent(a0)
         
     def connectSignalsSlots(self):
@@ -717,9 +726,9 @@ class Window(QMainWindow, Ui_MainWindow):
             pos = self.fingerActionsCount
         if not data:
             note = self.get_previous_note(pos)
-            data={'type': 2, 'time': 1.0, 'note': note}
+            data = {'type': 2, 'time': 1.0, 'note': note}
         if dialog:
-            dlg = FingersActionForm(parent=self, data=data, index=pos)
+            dlg = FingersActionForm(parent=self, data=data, index=pos, instrument=self.musician.get_instrument())
             dlg.setWindowTitle("Choose parameters")
             rsp = dlg.exec()
         else:
@@ -779,7 +788,7 @@ class Window(QMainWindow, Ui_MainWindow):
         '''
         if pos != 0:
             return self.finger_actions[-1]['note']
-        return 0
+        return 'C4'
 
     def get_previous_pos(self, pos):
         '''
@@ -814,6 +823,21 @@ class Window(QMainWindow, Ui_MainWindow):
         '''
         print("TO-DO: validate action")
         return True
+
+    def select_instrument(self):
+        """
+        Esta función despliega el diálogo de selección de instrumento
+        """
+        self.instrument_dialog = InstrumentForm(parent=self)
+        self.instrument_dialog.comboBox.currentIndexChanged.connect(self.change_player_instrument)
+        if self.instrument_dialog.exec():
+            pass
+
+    def change_player_instrument(self, value):
+        """
+        Esta función provoca un cambio de instrumento en el driver de dedos del músico
+        """
+        self.musician.set_instrument(self.instrument_dialog.comboBox.itemText(value).lower())
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

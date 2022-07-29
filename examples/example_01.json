@@ -32,7 +32,7 @@
             "acceleration": 30.0,
             "deceleration": 30.0,
             "deformation": 1,
-            "flow": 0,
+            "flow": 20.0,
             "jerk": 0,
             "move": 1,
             "offset": 2.0,
@@ -74,5 +74,5 @@
             "vibrato_freq": 0
         }
     ],
-    "timestamp": "20/06/2022 23:17:45"
+    "timestamp": "07/07/2022 11:49:51"
 }

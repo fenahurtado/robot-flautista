@@ -15,9 +15,9 @@ from utils.cinematica import *
 
 
 class MotorsController(threading.Thread):
-    '''
+    """
     Esta clase se usa para controlar el movimiento de los motores. Desde cualquier otro thread se puede llamar a la función move_to con un estado final al que se quiere llegar, aceleración y tiempo; y el thread del controlador conseguirá que los motores se coordinen para llegar a tal posición.
-    '''
+    """
     def __init__(self, running, state, x_driver, z_driver, alpha_driver):
         threading.Thread.__init__(self)
         self.state = state
@@ -38,85 +38,85 @@ class MotorsController(threading.Thread):
         self.alpha_driver.motor_position_signal.connect(self.change_alpha_position)
 
     def change_x_position(self, value):
-        '''
+        """
         Actualiza la posición en x de acuerdo a lo informado por el driver
-        '''
+        """
         self.state.x = self.x_units_to_mm(value)
 
     def change_z_position(self, value):
-        '''
+        """
         Actualiza la posición en z de acuerdo a lo informado por el driver
-        '''
+        """
         self.state.z = self.z_units_to_mm(value)
 
     def change_alpha_position(self, value):
-        '''
+        """
         Actualiza la posición en alpha de acuerdo a lo informado por el driver
-        '''
+        """
         self.state.alpha = self.alpha_units_to_angle(value)
 
     def x_mm_to_units(self, mm):
-        '''
+        """
         Transforma los mm de avance en X a pasos para el controlador
         input: mm = milímetros en el eje X
         output: pasos para el motor
-        '''
+        """
         if self.x_driver.motors_step_turn:
             return int(mm * self.x_driver.motors_step_turn / 8 )
         return int(mm * 1000 / 8 )
     
     def x_units_to_mm(self, units):
-        '''
+        """
         Transforma los pasos del controlador en mm de avance en X
         input: units = pasos para el motor
         output: milímetros en el eje X
-        '''
+        """
         if self.x_driver.motors_step_turn:
             return units * 8 / self.x_driver.motors_step_turn
         return units * 8 / 1000
 
     def z_mm_to_units(self, mm):
-        '''
+        """
         Transforma los mm de avance en Z a pasos para el controlador
         input: mm = milímetros en el eje Z
         output: pasos para el motor
-        '''
+        """
         if self.z_driver.motors_step_turn:
             return int(mm * self.z_driver.motors_step_turn / 8 )
         return int(mm * 1000 / 8 )
 
     def z_units_to_mm(self, units):
-        '''
+        """
         Transforma los pasos del controlador en mm de avance en Z
         input: units = pasos para el motor
         output: milímetros en el eje Z
-        '''
+        """
         if self.z_driver.motors_step_turn:
             return units * 8 / self.z_driver.motors_step_turn
         return units * 8 / 1000
     
     def alpha_angle_to_units(self, angle):
-        '''
+        """
         Transforma los grados de avance en alpha a pasos para el controlador
         input: angle = grados el eje Alpha
         output: pasos para el motor
-        '''
+        """
         if self.alpha_driver.motors_step_turn:
             return int(angle * self.alpha_driver.motors_step_turn / 360)
         return int(angle * 10000 / 360)
     
     def alpha_units_to_angle(self, units):
-        '''
+        """
         Transforma los pasos del controlador en grados de avance en alpha
         input: units = pasos para el motor
         output: grados el eje Alpha
-        '''
+        """
         if self.alpha_driver.motors_step_turn:
             return units * 360 / self.alpha_driver.motors_step_turn
         return units * 360 / 10000
 
     def get_route_positions(self, xi, zi, alphai, xf, zf, alphaf, divisions=20, plot=False):
-        '''
+        """
         Planifica una ruta desde un punto de inicio (xi, zi, alphai) hasta un punto final (xf, zf, alphaf) pasando por la trayectoria de las variables del sistema: r, theta y offset. Es decir, si se quiere ir desde un punto de inicio A que está a radio r_a de la flauta a un punto B que está a radio r_b (pero el ángulo theta y el offset se mantienen), se calcula la trayectoria de forma que las otras variables (theta y offset) se mantengan constantes en todo su recorrido. En el caso del radio esta trayectoria es recta, pero en el de theta es circular y en el del offset elíptico. También se permite una combinación de estas tres.
 
         inputs:
@@ -130,7 +130,7 @@ class MotorsController(threading.Thread):
         z_points     = lista de posiciónes en el eje z
         alpha_points = lista de posiciónes en el eje alpha
         d            = lista de la distancia recorrida hasta cada punto
-        '''
+        """
         ri, thetai, oi = get_r_theta_o(xi, zi, alphai)
         rf, thetaf, of = get_r_theta_o(xf, zf, alphaf)
 
@@ -194,7 +194,7 @@ class MotorsController(threading.Thread):
         return x_points, z_points, alpha_points, d
 
     def max_dist_rec(self, acc, dec, T):
-        '''
+        """
         Dice cuál es la mayor distancia que se puede recorrer durante un tiempo T con la aceleración y desaceleración descritas.
         Sirve para validar si es posible realizar un movimiento (supone que el motor es capaz de lograr esas aceleraciones y que no tiene límite de velocidad)
         
@@ -205,14 +205,14 @@ class MotorsController(threading.Thread):
 
         output:
         dist_max = distancia máxima
-        '''
+        """
         d_acc = (acc/2) * ((dec*T)/(acc+dec))**2
         d_dec = acc*(dec*T)/(acc+dec) * (T-(dec*T)/(acc+dec)) / 2
         dist_max = d_acc + d_dec
         return dist_max
 
     def plan_speed_curve(self, d, acceleration, deceleration, T):
-        '''
+        """
         A partir de una distancia d que se quiere recorrer en un tiempo T con una aceleración de partida y una de detención descritas, se planifica una curva de velocidades con forma trapezoidal.
         
         inputs:
@@ -225,7 +225,7 @@ class MotorsController(threading.Thread):
         speed = velocidad en regimen permanente
         t_acc = tiempo durante el que acelera
         t_dec = tiempo en el que empieza a frenar
-        '''
+        """
         #print(d, T, acceleration, deceleration, self.max_dist_rec(acceleration, deceleration, T))
         speed = (acceleration*deceleration*T - sqrt(acceleration*deceleration*(acceleration*deceleration*T**2 - 2*acceleration*d - 2*deceleration*d))) / (acceleration+deceleration)
         t_acc = speed / acceleration
@@ -233,7 +233,7 @@ class MotorsController(threading.Thread):
         return speed, t_acc, t_dec
 
     def plan_temps_according_to_speed(self, distances, vel, t_acc, t_dec, acc, dec):
-        '''
+        """
         Entrega una lista con los tiempos en los que se debe pasar por cada punto de la ruta de acuerdo a la curva de velocidades que se quiere lograr.
 
         inputs:
@@ -246,7 +246,7 @@ class MotorsController(threading.Thread):
 
         outputs:
         temps = lista de tiempos en los que se quiere pasar por cada punto de la trayectoria
-        '''
+        """
         d_t_acc = acc * t_acc**2 / 2
         d_t_dec = d_t_acc + vel * (t_dec - t_acc)
         temps = []
@@ -264,7 +264,7 @@ class MotorsController(threading.Thread):
         return temps
 
     def plan_route(self, x_points, z_points, alpha_points, temps):
-        '''
+        """
         Recopila las listas de posiciones y tiempos, con ellas calcula las velocidades (con el método de las secantes) para cada eje y devuelve una lista con diccionarios para cada punto.
 
         inputs:
@@ -275,7 +275,7 @@ class MotorsController(threading.Thread):
 
         output:
         steps = diccionario con las instrucciones de los assemblies para cada eje más una lista de los tiempos en los que se debe pasar por cada referencia
-        '''
+        """
         steps = {'x': [], 'z': [], 'alpha': [], 't': []}
 
         for i in range(len(x_points) - 1):
@@ -302,7 +302,7 @@ class MotorsController(threading.Thread):
         return steps
 
     def move_to(self, desired_state, acc=20, dec=20, T=None):
-        '''
+        """
         Función para llamar desde cualquier thread. Setea los parámetros necesarios para que después se ejecute (desde el thread del controlador) la trayectoria desde el estado actual hasta desired_state siguiendo las trayectorias del sistema
 
         inputs:
@@ -313,7 +313,7 @@ class MotorsController(threading.Thread):
 
         output:
         T  = tiempo en el que se quiere realizar el movimiento (si no se da se calcula según la distancia a recorrer)
-        '''
+        """
         if self.state.is_too_close(desired_state):
             return 0
 
@@ -346,9 +346,9 @@ class MotorsController(threading.Thread):
         return T
 
     def move_cartesians_only(self, desired_state, speed=1000):
-        '''
+        """
         Función para llamar desde cualquier thread. Setea los parámetros necesarios para que después se ejecute (desde el thread del controlador) la trayectoria desde el estado actual hasta desired_state siguiendo trayectorias cartesianas.
-        '''
+        """
         #print(desired_state)
         self.x_ref = desired_state.x
         self.z_ref = desired_state.z
@@ -360,28 +360,28 @@ class MotorsController(threading.Thread):
         self.changeEvent.set()
 
     def home_alpha(self):
-        '''
+        """
         Función que setea la posición actual del eje alpha como el cero
-        '''
+        """
         self.alpha_driver.request_write_preset_position(0)
         self.alpha_ref = 0
         self.state.alpha = 0
 
     def move_alpha(self, value):
-        '''
+        """
         Función que mueve el eje alpha a la posición indicada en value
         
         input:
         value = posición en grados a la que se quiere mover el eje
-        '''
+        """
         units = self.alpha_angle_to_units(value)
         self.alpha_driver.request_write_absolute_move(units, programmed_speed=10000, acceleration=1000, deceleration=1000)
         self.alpha_driver.request_write_return_to_command_mode()
 
     def stop(self):
-        '''
+        """
         Función que se puede llamar desde otro thread para frenar un movimiento en acción
-        '''
+        """
         self.stop_movement = True
         if not self.x_driver.stopped:
             self.x_driver.request_write_hold_move()
@@ -392,9 +392,9 @@ class MotorsController(threading.Thread):
         #self.changeEvent.set()
 
     def homed(self):
-        '''
+        """
         Establece la posición actual de los tres motores como el cero
-        '''
+        """
         self.x_driver.request_write_preset_position(0)
         self.x_ref = 0
         self.state.x = 0
@@ -406,9 +406,9 @@ class MotorsController(threading.Thread):
         self.state.alpha = 0
 
     def reset_drivers(self):
-        '''
+        """
         Resetea los drivers a sus configuraciones iniciales.
-        '''
+        """
         self.x_driver.request_write_reset()
         self.z_driver.request_write_reset()
         self.alpha_driver.request_write_reset()
@@ -469,9 +469,9 @@ class MotorsController(threading.Thread):
         print('Signal ended')
 
 class Recorder:
-    '''
+    """
     Esta clase se encarga de almacenar la historia de las variables medidas. windowWidth dice la cantidad de datos a almacenar e interval el tiempo (en milisegundos) para obtener una muestra.
-    '''
+    """
     def __init__(self, flowController, pressureSensor, microphone, position, motors_controller, windowWidth=200, interval=10):
         self.flowController = flowController
         self.pressureSensor = pressureSensor
@@ -538,10 +538,11 @@ class Recorder:
         self.times[:-1] = self.times[1:]                      # shift data in the temporal mean 1 sample left
         self.times[-1] = time() - self.t0
 
+
 class FlowSignalGenerator(threading.Thread):
-    '''
+    """
     Esta clase se encarga de asignarle una referencia al flujo, permite conseguir rampas de distintas formas entre dos valores y la posibilidad de agregar vibratos (modificable amplitud y frecuencia)
-    '''
+    """
     def __init__(self, callback, running, Fi=0, Ff=0, T=0, deformation=1, vibrato_amp=0, vibrato_freq=0):
         threading.Thread.__init__(self) # Initialize the threading superclass
         self.callback = callback
@@ -585,7 +586,7 @@ class FlowSignalGenerator(threading.Thread):
         self.vibrato_amp = next_state.vibrato_amp
         self.vibrato_freq = next_state.vibrato_freq
         self.t0 = time()
-        #print(self.Ff, self.vibrato_amp, self.vibrato_freq)
+        # print(self.Ff, self.vibrato_amp, self.vibrato_freq)
 
     def stop(self):
         self.T = 0
@@ -599,16 +600,18 @@ class FlowSignalGenerator(threading.Thread):
             value = self.min_value
         return value
 
+
 class Player(QtCore.QThread):
-    '''
+    """
     Esta clase es la que interactúa con los controladores de motores, de flujo y de teclas. Es el equivalente al músico.
-    '''
+    """
     finished_score = QtCore.pyqtSignal()
     finished_initial_positioning = QtCore.pyqtSignal()
     begin_phrase_action = QtCore.pyqtSignal(object)
     begin_finger_action = QtCore.pyqtSignal(object)
 
-    def __init__(self, running, state, flow_controller, preasure_sensor, x_drive, z_drive, alpha_drive, microphone):
+    def __init__(self, running, state, flow_controller, preasure_sensor, x_drive, z_drive, alpha_drive, microphone,
+                 fingers_driver):
         QtCore.QThread.__init__(self)
         self.running = running
         self.state = state
@@ -623,6 +626,8 @@ class Player(QtCore.QThread):
         self.alpha_drive = alpha_drive
 
         self.microphone = microphone
+
+        self.fingers_driver = fingers_driver
 
         self.motors_event = threading.Event()
         self.motors_event.set()
@@ -639,15 +644,15 @@ class Player(QtCore.QThread):
         self.initial_position = None
         self.phrase_instructions = []
         self.finger_instructions = []
-        self.next_state = State(0,0,0,0)
+        self.next_state = State(0, 0, 0, 0)
         self.next_state.homed()
         self.performing = threading.Event()
         self.playing = threading.Event()
 
     def update_flow(self, value):
-        '''
+        """
         Actualiza el flujo de acuerdo a lo leido por el controlador de flujo
-        '''
+        """
         self.state.flow = value
 
     def run(self):
@@ -665,7 +670,7 @@ class Player(QtCore.QThread):
         print('Player thread killed')
 
     def move_to_state(self, desired_state, T=None, deformation=1, acc=50, dec=50, onlyCartesian=False, onlyFlow=False):
-        '''
+        """
         Sirve para moverse a otro estado cambiando cada una de las dimensiones que se quiera cambiar: x, z, alpha (o equivalentemente r, theta y offset), flujo, amplitud del vibrato y frecuencia del vibrato. Además permite decidir cómo se quiere mover de un estado a otro.
 
         inputs:
@@ -676,7 +681,7 @@ class Player(QtCore.QThread):
         dec           = desaceleración de frenado
         onlyCartesian = bool si se quiere mover por trayectorias cartesianas
         onlyFlow      = bool si solo se quiere cambiar características del flujo
-        '''
+        """
         if onlyFlow:
             if self.state.flow != desired_state.flow or self.state.vibrato_freq != desired_state.vibrato_freq or self.state.vibrato_amp != desired_state.vibrato_amp:
                 self.flow_reference_signal.move_to(desired_state, T, deformation)
@@ -701,9 +706,9 @@ class Player(QtCore.QThread):
         self.move_to_state(self.next_state, T=T, deformation=deformation, speed=speed, acc=acc, dec=dec, error=error, onlyCartesian=onlyCartesian)
 
     def play(self):
-        '''
+        """
         Cuando se tiene una lista de instrucciones (self.initial_position, self.phrase_instructions y self.finger_instructions), esta función sirve para ejecutarlas en orden
-        '''
+        """
 
         #print(self.initial_position)
 
@@ -825,25 +830,25 @@ class Player(QtCore.QThread):
         # print(self.phrase_instructions)
         # print(self.finger_instructions)
 
-
     def execute_phrase_action(self, action):
-        '''
+        """
         Ejecuta una action de la frase musical (posición + flujo)
-        '''
+        """
         if action['data']['move']:
             desired_state = State(action['data']['r'], action['data']['theta'], action['data']['offset'], action['data']['flow'], vibrato_freq=action['data']['vibrato_freq'], vibrato_amp=action['data']['vibrato_amp'])
 
             self.move_to_state(desired_state, T=action['data']['time'], deformation=action['data']['deformation'], acc=action['data']['acceleration'], dec=action['data']['deceleration'])
 
     def execute_fingers_action(self, action):
-        '''
+        """
         Ejecuta una acción de los dedos
-        '''
-        pass
+        """
+        self.fingers_driver.request_finger_action(action['data']['note'])
 
     def stop(self):
         self.motors_controller.stop()
         self.flow_reference_signal.stop()
+        self.fingers_driver.stop()
 
     def moving(self):
         moving_x = self.motors_controller.x_driver.moving_cw or self.motors_controller.x_driver.moving_ccw
@@ -873,3 +878,18 @@ class Player(QtCore.QThread):
         #self.motors_controller.alpha_driver.request_write_set_starting_speed(1)
 
         self.motors_controller.homed()
+
+    def get_instrument(self):
+        """
+        Función para recibir el instrumento que actualmente dicta el diccionario de digitación.
+        :return: None
+        """
+        return self.fingers_driver.instrument
+
+    def set_instrument(self, new_instrument):
+        """
+        Función para definir un nuevo diccionario de digitación para otro instrumento
+        :param new_instrument:
+        :return:
+        """
+        self.fingers_driver.instrument = new_instrument

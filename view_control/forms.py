@@ -1,6 +1,7 @@
 from functools import partial
 import imp
 from PyQt5.QtWidgets import QDialog
+from utils.driver_fingers import instrument_dicts
 
 from views.move_edit_window import Ui_Dialog as MoveDialog
 #from views.stay_edit_window import Ui_Dialog as StayDialog
@@ -10,9 +11,11 @@ from views.calibrate_flute_menu import Ui_Dialog as CalibrateFlutePosDialog
 from views.dialog_control import Ui_Dialog as ConfigureFluteControlDialog
 from views.start_edit_window import Ui_Dialog as StartDialog
 from views.finger_window import Ui_Dialog as FingerDialog
+from views.instrument_window import Ui_Dialog as InstrumentDialog
 from view_control.plot_pyqt import RouteWidget, RampWidget
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5 import QtWidgets
+
 
 class ConfigureFluteControlForm(QDialog, ConfigureFluteControlDialog):
     def __init__(self, parent=None, data=[0,0,0,0,0]):
@@ -50,6 +53,7 @@ class ConfigureFluteControlForm(QDialog, ConfigureFluteControlDialog):
     def change_kd(self, value):
         self.data[4] = value
 
+
 class CalibrateAngleForm(QDialog, CalibrateAngleDialog):
     def __init__(self, parent=None, data=[0]):
         super().__init__(parent) #super(Form, self).__init__(parent)
@@ -63,6 +67,7 @@ class CalibrateAngleForm(QDialog, CalibrateAngleDialog):
 
     def change_angle(self, value):
         self.data[0] = value
+
 
 class CalibrateFluteForm(QDialog, CalibrateFlutePosDialog):
     def __init__(self, parent=None, data=[0,0]):
@@ -82,6 +87,7 @@ class CalibrateFluteForm(QDialog, CalibrateFlutePosDialog):
 
     def change_f_z(self, value):
         self.data[1] = value
+
 
 class StartActionForm(QDialog, StartDialog):
     def __init__(self, parent=None, data={'type': 0, 'r': 0, 'theta': 0,'offset': 0}):
@@ -107,22 +113,24 @@ class StartActionForm(QDialog, StartDialog):
     def change_theta(self, value):
         self.data['theta'] = value
 
+
 class FingersActionForm(QDialog, FingerDialog):
-    def __init__(self, parent=None, data={'time': 1, 'note': 0}, index=-1):
-        super().__init__(parent) #super(Form, self).__init__(parent)
-        self.setupUi(self)
+    def __init__(self, parent=None, data={'time': 1, 'note': 'C4'}, index=-1, instrument='flute'):
+        super().__init__(parent) # super(Form, self).__init__(parent)
+        self.setupUi(self, instrument)
         self.parent = parent
         self.data = data
         self.index = index
 
-        self.noteComboBox.setCurrentIndex(data['note'])
+        self.noteComboBox.setCurrentIndex(self.noteComboBox.findText(data['note']))
         self.durationSpinBox.setValue(data['time'])
 
-        self.noteComboBox.currentIndexChanged.connect(partial(self.update_data,'note'))
-        self.durationSpinBox.valueChanged.connect(partial(self.update_data,'time'))
+        self.noteComboBox.currentIndexChanged.connect(partial(self.update_data, 'note'))
+        self.durationSpinBox.valueChanged.connect(partial(self.update_data, 'time'))
 
     def update_data(self, tag, value):
-        self.data[tag] = value
+        self.data[tag] = self.noteComboBox.itemText(value)
+
 
 class MoveActionForm(QDialog, MoveDialog):
     def __init__(self, parent=None, data={'type': 0, 'move': 0, 'time': 1.0, 'r': 0, 'theta': 0, 'offset': 0, 'jerk': 0, 'acceleration': 0, 'deceleration': 0, 'flow': 0, 'deformation': 0, 'vibrato_amp': 0, 'vibrato_freq': 0}, index=-1):
@@ -274,3 +282,22 @@ class MoveActionForm(QDialog, MoveDialog):
 
     def get_last_pos(self):
         return self.parent.get_previous_pos(self.index)
+
+
+class InstrumentForm(QDialog, InstrumentDialog):
+    def __init__(self, parent=None, instrument='flute'):
+        super().__init__(parent)
+        self.setupUi(self)
+        self.parent = parent
+
+        self.instrument = instrument
+
+        # Agrega las acciones disponibles al Combo Box
+        self.comboBox.addItems([name.capitalize() for name in instrument_dicts.keys()])
+        self.comboBox.setCurrentIndex(0)
+
+        # Conecta el cambio de valor con la función correspondiente
+        # self.comboBox.currentIndexChanged.connect(self.change_instrument)
+
+    def change_instrument(self, value):
+        self.instrument = instrument_dicts[self.comboBox.itemText(value).lower()]
