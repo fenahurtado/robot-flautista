@@ -136,7 +136,9 @@ class FingersActionForm(QDialog, FingerDialog):
 
 
 class MoveActionForm(QDialog, MoveDialog):
-    def __init__(self, parent=None, data={'type': 0, 'move': 0, 'time': 1.0, 'r': 0, 'theta': 0, 'offset': 0, 'jerk': 0, 'acceleration': 0, 'deceleration': 0, 'flow': 0, 'deformation': 0, 'vibrato_amp': 0, 'vibrato_freq': 0}, index=-1):
+    def __init__(self, parent=None, data={'type': 0, 'move': 0, 'time': 1.0, 'r': 0, 'theta': 0, 'offset': 0, 'jerk': 0,
+                                          'acceleration': 0, 'deceleration': 0, 'flow': 0, 'deformation': 0,
+                                          'vibrato_amp': 0, 'vibrato_freq': 0}, index=-1):
         super().__init__(parent) #super(Form, self).__init__(parent)
         self.setupUi(self)
         self.parent = parent

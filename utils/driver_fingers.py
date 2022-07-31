@@ -79,8 +79,20 @@ quena_dict = {'G3':  '00 1111111',
               'F6':  '00 0100000',
               'F#6': '00 1111100'}
 
+test_dict = {'1': '000000001',
+             '2': '000000010',
+             '3': '000000100',
+             '4': '000001000',
+             '5': '000010000',
+             '6': '000100000',
+             '7': '001000000',
+             '8': '010000000',
+             '9': '100000000',
+             '0': '000000000'}
+
 instrument_dicts = {'flute': flute_dict,
-                    'quena': quena_dict}
+                    'quena': quena_dict,
+                    'test':  test_dict}
 
 
 class FingersDriver(QtCore.QThread):
@@ -126,18 +138,14 @@ class FingersDriver(QtCore.QThread):
         # Suelta todas las llaves
         self.serial_port.write(b'\0\0')
 
-    def request_finger_action(self, requested_note: str):
+    def request_finger_action(self, req_note: str):
         """
         Función para llamar desde FingersController
-        :param requested_note: string indicando la nota que se desea.
+        :param req_note: string indicando la nota que se desea.
         """
 
         # Modifica el estado de servos interno según un diccionario
-        if self.instrument == 'flute':
-            self.state = int(flute_dict[requested_note].replace(' ', ''), 2).to_bytes(2, byteorder='big')
-
-        elif self.instrument == 'quena':
-            self.state = int(quena_dict[requested_note].replace(' ', ''), 2).to_bytes(2, byteorder='big')
+        self.state = int(instrument_dicts[self.instrument][req_note].replace(' ', ''), 2).to_bytes(2, byteorder='big')
 
         # Levanta el flag para generar un cambio en el Thread principal
         self.changeEvent.set()
@@ -148,12 +156,12 @@ if __name__ == "__main__":
     test_finger_event = threading.Event()
     test_finger_event.set()
     test_host = '/dev/cu.usbmodem1414401'
-    test_driver = FingersDriver(test_host, test_finger_event)
+    test_driver = FingersDriver(test_host, test_finger_event, instrument='test')
 
     test_driver.start()
     sleep(1)
 
-    for note in flute_dict.keys():
+    for note in test_dict.keys():
 
         # DEBUGGING: Muestra detalles sobre el mensaje enviado
         print(f'Nota: {note}')

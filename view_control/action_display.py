@@ -21,7 +21,6 @@ class ActionWidget(QWidget):
         main_layout = QGridLayout()
         #main_layout.SetFixedSize(130)
         self.setLayout(main_layout)
-        print(f'Width = {self.width}')
         self.setFixedWidth(int(100*self.width-6))
         #self.setFixedHeight(300)
         

@@ -703,7 +703,8 @@ class Window(QMainWindow, Ui_MainWindow):
         else:
             rsp = True
         if rsp:
-            startPosAction = ActionWidget(data, 'Move to initial position', width=2, parent=self, context=self.initialPositionLayout, index=0)
+            startPosAction = ActionWidget(data, 'Move to initial position', width=2, parent=self,
+                                          context=self.initialPositionLayout, index=0)
             self.initialPositionLayout.insertWidget(0, startPosAction)
             #self.phrase_actions.insert(0, {'type': 0, 'data': data})
             #self.finger_actions.insert(0, {'note': data['key']})
@@ -734,7 +735,8 @@ class Window(QMainWindow, Ui_MainWindow):
         else:
             rsp = True
         if rsp:
-            newAction = ActionWidget(data, str(data['note']), width=data['time'], parent=self, context=self.fingersScoreLayout, index=pos)
+            newAction = ActionWidget(data, str(data['note']), width=data['time'], parent=self,
+                                     context=self.fingersScoreLayout, index=pos)
             self.fingerActionsCount += 1
             self.fingersScoreLayout.insertWidget(pos, newAction)
             self.finger_actions.insert(pos, data)
@@ -753,7 +755,8 @@ class Window(QMainWindow, Ui_MainWindow):
             pos = self.actionsCount
         if not data:
             r, theta, o, f, v_a, v_f = self.get_previous_pos(pos)
-            data={'type': 1, 'move': 0, 'time': 1.0, 'r': r, 'theta': theta, 'offset': o, 'acceleration': 0, 'deceleration': 0, 'jerk': 0, 'flow': f, 'deformation': 1, 'vibrato_amp': v_a, 'vibrato_freq': v_f}
+            data = {'type': 1, 'move': 0, 'time': 1.0, 'r': r, 'theta': theta, 'offset': o, 'acceleration': 0,
+                    'deceleration': 0, 'jerk': 0, 'flow': f, 'deformation': 1, 'vibrato_amp': v_a, 'vibrato_freq': v_f}
         if dialog:
             dlg = MoveActionForm(parent=self, data=data, index=pos)
             dlg.setWindowTitle("Choose parameters")
@@ -771,7 +774,8 @@ class Window(QMainWindow, Ui_MainWindow):
                 if not rsp:
                     break
 
-            newAction = ActionWidget(data, 'Changing State', width=data['time'], parent=self, context=self.scoreLayout, index=pos)
+            newAction = ActionWidget(data, 'Changing State', width=data['time'], parent=self, context=self.scoreLayout,
+                                     index=pos)
             self.actionsCount += 1
             self.scoreLayout.insertWidget(pos, newAction)
             self.phrase_actions.insert(pos, data)
