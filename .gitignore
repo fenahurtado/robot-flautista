@@ -2,4 +2,5 @@
 utils/__pycache__/
 view_control/__pycache__/
 views/__pycache__/
-
+.DS_Store
+./resources/DS_Store
