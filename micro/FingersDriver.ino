@@ -46,8 +46,8 @@ void loop() {
       // digitalWrite(keys[i], pressed);
       
       // Acciona y desacciona los servos
-      if (pressed) servos[i].write(180);
-      else servos[i].write(90);
+      if (pressed) servos[i].write(130);
+      else servos[i].write(80);
     }
   }
 }

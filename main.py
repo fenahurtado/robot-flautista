@@ -9,7 +9,7 @@ from utils.player import Player, State
 from utils.sensores_alicat import FlowController, PreasureSensor
 from view_control.main_window import Window
 
-connected = False
+connected = True
 
 preasure_sensor_event = threading.Event()
 preasure_sensor_event.set()
@@ -44,7 +44,7 @@ microphone = Microphone(microphone_event)
 # Funcionalidad de servos para presionar las llaves
 fingers_event = threading.Event()
 fingers_event.set()
-fingers_driver = FingersDriver('/dev/cu.usbmodem1414401', fingers_event, connected=True)
+fingers_driver = FingersDriver('/dev/cu.usbserial-142420', fingers_event, connected=connected)
 fingers_driver.start()
 
 state = State(0, 0, 0, 0)

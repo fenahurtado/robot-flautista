@@ -18,7 +18,7 @@ flute_dict = {'C3':  '00000 0000',
               'B3':  '11000 0001',
               'C4':  '10000 0001',
               'C#4': '00000 0001',
-              'D4':  '10110 1110',
+              'D4':  '01110 1110',
               'D#4': '10110 1111',
               'E4':  '11110 1101',
               'F4':  '11110 1001',
@@ -145,23 +145,39 @@ class FingersDriver(QtCore.QThread):
         """
 
         # Modifica el estado de servos interno según un diccionario
-        self.state = int(instrument_dicts[self.instrument][req_note].replace(' ', ''), 2).to_bytes(2, byteorder='big')
+        servo = translate_fingers_to_servo(instrument_dicts[self.instrument][req_note])
+        self.state = int(servo.replace(' ', ''), 2).to_bytes(2, byteorder='big')
 
         # Levanta el flag para generar un cambio en el Thread principal
         self.changeEvent.set()
+
+
+def translate_fingers_to_servo(note_bits):
+    """
+    Intercambia las llaves 4 y 5 por disposición geométrica.
+    - llave nueva 4 <-- llave antigua 5.
+    - llave nueva 5 <-- llave antigua 4.
+    :param note_bits:
+    :return:
+    """
+    servo_bits = list(note_bits)
+    servo_bits[3] = note_bits[4]
+    servo_bits[4] = note_bits[3]
+
+    return ''.join(servo_bits)
 
 
 if __name__ == "__main__":
 
     test_finger_event = threading.Event()
     test_finger_event.set()
-    test_host = '/dev/cu.usbmodem1414401'
-    test_driver = FingersDriver(test_host, test_finger_event, instrument='test')
+    test_host = '/dev/cu.usbserial-142420'
+    test_driver = FingersDriver(test_host, test_finger_event, instrument='flute')
 
     test_driver.start()
     sleep(1)
 
-    for note in test_dict.keys():
+    for note in flute_dict.keys():
 
         # DEBUGGING: Muestra detalles sobre el mensaje enviado
         print(f'Nota: {note}')
@@ -170,3 +186,5 @@ if __name__ == "__main__":
         print(f"Binario: {int.from_bytes(test_driver.state, byteorder='big'):09b}\n")
 
         input()
+
+
