@@ -7,7 +7,7 @@ import time
 import threading
 import random
 from functools import partial
-#from librosa import yin
+from librosa import yin
 
 class Microphone(threading.Thread):
     def __init__(self, running):
@@ -39,8 +39,7 @@ class Microphone(threading.Thread):
                 senal_filtrada1 = signal.lfilter(self.flt, self.A, self.last_mic_data)
                 senal_filtrada2 = signal.lfilter(self.B2, self.A2, senal_filtrada1)
 
-                pitches = [0] #yin(senal_filtrada2, sr=self.sr, fmin=100, fmax=12800)#, trough_threshold=0.0001)
-
+                pitches = yin(senal_filtrada2, sr=self.sr, fmin=100, fmax=12800) #, trough_threshold=0.0001)]
                 #print(pitches[-1])
                 #print(1/(self.last_mic_data.shape[0]*(1/self.sr)), pitches[-1])
                 #compute_yin() NUT = 1

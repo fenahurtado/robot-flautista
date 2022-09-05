@@ -39,12 +39,13 @@ alpha_driver.start()
 microphone_event = threading.Event()
 microphone_event.set()
 microphone = Microphone(microphone_event)
-#microphone.start()
+microphone.start()
 
 # Funcionalidad de servos para presionar las llaves
 fingers_event = threading.Event()
 fingers_event.set()
-fingers_driver = FingersDriver('/dev/cu.usbserial-142420', fingers_event, connected=connected)
+## TEFO: '/dev/cu.usbserial-142420'
+fingers_driver = FingersDriver('/dev/ttyUSB0', fingers_event, connected=connected)
 fingers_driver.start()
 
 state = State(0, 0, 0, 0)

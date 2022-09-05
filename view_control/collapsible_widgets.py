@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from utils.cinematica import *
+from utils.driver_fingers import instrument_dicts
 
 class CollapsibleBox(QtWidgets.QWidget):
     def __init__(self, title="", parent=None):
@@ -137,12 +138,18 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
         self.gridLayout.addWidget(self.labelFlowVibratoAmplitude, 2, 6, 1, 1)
         self.gridLayout.addWidget(self.spinBoxFlowVibratoAmplitude, 2, 7, 1, 1)
 
+        self.labelNote = QtWidgets.QLabel("Note:")
+        self.comboBoxNote = QtWidgets.QComboBox()
+
+        self.gridLayout.addWidget(self.labelNote, 0, 8, 1, 1)
+        self.gridLayout.addWidget(self.comboBoxNote, 0, 9, 1, 1)
+        
         # spacerItem = QtWidgets.QSpacerItem(100, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
         # self.gridLayout.addItem(spacerItem, 0, 5, 3, 1)
         
         self.stopButton = QtWidgets.QPushButton('Stop')
         self.stopButton.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-        self.gridLayout.addWidget(self.stopButton, 0, 9, 3, 1)
+        self.gridLayout.addWidget(self.stopButton, 0, 10, 3, 1)
 
         # spacerItem = QtWidgets.QSpacerItem(100, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
         # self.gridLayout.addItem(spacerItem, 0, 8, 3, 1)
@@ -165,6 +172,14 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
         self.spinBoxFlow.valueChanged.connect(self.change_flow)
         self.spinBoxFlowVibrato.valueChanged.connect(self.change_flow_vibrato)
         self.spinBoxFlowVibratoAmplitude.valueChanged.connect(self.change_flow_vibrato_amp)
+        self.comboBoxNote.currentIndexChanged.connect(self.change_note)
+
+    def change_note(self, value):
+        print(self.comboBoxNote.itemText(value))
+        self.parent.musician.execute_fingers_action(self.comboBoxNote.itemText(value), through_action=False)
+
+    def add_notes(self, instrument):
+        self.comboBoxNote.addItems(instrument_dicts[instrument].keys())
 
     def set_values(self, state):
         self.changing_other = True

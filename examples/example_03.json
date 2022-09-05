@@ -1,0 +1,83 @@
+{
+    "fingers": [
+        {
+            "note": "C4",
+            "time": 3.0,
+            "type": 2
+        },
+        {
+            "note": "D4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "E4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "F4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "G4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "A4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "B4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "C5",
+            "time": 1.0,
+            "type": 2
+        }
+    ],
+    "init_pos": {
+        "offset": 0.0,
+        "r": 20.0,
+        "theta": 45.0,
+        "type": 0
+    },
+    "phrase": [
+        {
+            "acceleration": 30.0,
+            "deceleration": 30.0,
+            "deformation": 2.0,
+            "flow": 15.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": 0.0,
+            "r": 5.0,
+            "theta": 60.0,
+            "time": 2.0,
+            "type": 1,
+            "vibrato_amp": 3.0,
+            "vibrato_freq": 4.0
+        },
+        {
+            "acceleration": 0,
+            "deceleration": 0,
+            "deformation": 1,
+            "flow": 15.0,
+            "jerk": 0,
+            "move": 0,
+            "offset": 0.0,
+            "r": 15.0,
+            "theta": 55.0,
+            "time": 8.0,
+            "type": 1,
+            "vibrato_amp": 3.0,
+            "vibrato_freq": 4.0
+        }
+    ],
+    "timestamp": "03/09/2022 07:22:53"
+}

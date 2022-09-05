@@ -117,8 +117,10 @@ class Window(QMainWindow, Ui_MainWindow):
 
         # Selección de instrumento
         self.instrument_dialog = None
+        self.instrument = 'flute'
         self.select_instrument()
-
+        self.moveBox.add_notes(self.instrument)
+        
         self.musician.recorder.start()
 
     def closeEvent(self, a0: QtGui.QCloseEvent):
@@ -841,6 +843,7 @@ class Window(QMainWindow, Ui_MainWindow):
         """
         Esta función provoca un cambio de instrumento en el driver de dedos del músico
         """
+        self.instrument = self.instrument_dialog.comboBox.itemText(value).lower()
         self.musician.set_instrument(self.instrument_dialog.comboBox.itemText(value).lower())
 
 

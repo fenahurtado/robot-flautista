@@ -319,7 +319,7 @@ class MotorsController(threading.Thread):
 
         x_points, z_points, alpha_points, d = self.get_route_positions(*self.state.cart_coords(), *desired_state.cart_coords(), divisions=12, plot=False)
 
-        #print(x_points)
+        print(x_points)
         
         if not T:
             T = 0.1
@@ -473,6 +473,7 @@ class Recorder:
     Esta clase se encarga de almacenar la historia de las variables medidas. windowWidth dice la cantidad de datos a almacenar e interval el tiempo (en milisegundos) para obtener una muestra.
     """
     def __init__(self, flowController, pressureSensor, microphone, position, motors_controller, windowWidth=200, interval=10):
+        self.saving = False
         self.flowController = flowController
         self.pressureSensor = pressureSensor
         self.microphone = microphone
@@ -537,6 +538,8 @@ class Recorder:
         self.frequency[-1] = self.microphone.pitch
         self.times[:-1] = self.times[1:]                      # shift data in the temporal mean 1 sample left
         self.times[-1] = time() - self.t0
+        if self.saving:
+            pass
 
 
 class FlowSignalGenerator(threading.Thread):
@@ -564,6 +567,7 @@ class FlowSignalGenerator(threading.Thread):
 
         while self.running.is_set():
             t = time() - self.t0
+            #print(t, self.T)
             if t < self.T:
                 ramp = self.Fi + (self.Ff-self.Fi) * (t / self.T) ** self.deformation
                 vibr = self.vibrato_amp * np.sin(t * 2*np.pi * self.vibrato_freq)
@@ -839,11 +843,15 @@ class Player(QtCore.QThread):
 
             self.move_to_state(desired_state, T=action['data']['time'], deformation=action['data']['deformation'], acc=action['data']['acceleration'], dec=action['data']['deceleration'])
 
-    def execute_fingers_action(self, action):
+    def execute_fingers_action(self, action, through_action=True):
         """
         Ejecuta una acción de los dedos
         """
-        self.fingers_driver.request_finger_action(action['data']['note'])
+        #print(action['data']['note'])
+        if through_action:
+            self.fingers_driver.request_finger_action(action['data']['note'])
+        else:
+            self.fingers_driver.request_finger_action(action)
 
     def stop(self):
         self.motors_controller.stop()
