@@ -4,6 +4,7 @@ from time import time, sleep
 from PyQt5.QtWidgets import QApplication
 from PyQt5 import QtCore
 import numpy as np
+import pandas as pd
 
 from utils.driver_amci import AMCIDriver
 from utils.microphone import Microphone
@@ -498,6 +499,8 @@ class Recorder:
         self.times = linspace(0,0,self.windowWidth)
         self.t0 = time()
 
+        self.data = pd.DataFrame(columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
+
         self.interval = interval
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
@@ -539,7 +542,22 @@ class Recorder:
         self.times[:-1] = self.times[1:]                      # shift data in the temporal mean 1 sample left
         self.times[-1] = time() - self.t0
         if self.saving:
-            pass
+            new_data = pd.DataFrame([[self.times[-1], self.frequency[-1], self.temperature[-1], self.mass_flow[-1], self.volume_flow[-1], self.mouth_pressure[-1], self.offset[-1], self.theta[-1], self.radius[-1], self.alpha[-1], self.z[-1], self.x[-1], self.alpha_ref[-1], self.z_ref[-1], self.x_ref[-1], self.alpha_ref[-1]]], columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
+            self.data = pd.concat([self.data, new_data], ignore_index=True)
+    
+    def start_saving(self):
+        self.data = pd.DataFrame(columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
+        self.saving = True
+    
+    def pause_saving(self):
+        self.saving = False
+
+    def resume_saving(self):
+        self.saving = True
+    
+    def finish_saving(self, file_name):
+        self.saving = False
+        self.data.to_csv(file_name)
 
 
 class FlowSignalGenerator(threading.Thread):
@@ -653,6 +671,22 @@ class Player(QtCore.QThread):
         self.performing = threading.Event()
         self.playing = threading.Event()
 
+    def start_saving_data(self):
+        self.recorder.start_saving()
+        self.microphone.start_saving()
+
+    def pause_saving_data(self):
+        self.recorder.pause_saving()
+        self.microphone.pause_saving()
+
+    def resume_saving_data(self):
+        self.recorder.resume_saving()
+        self.microphone.resume_saving()
+
+    def save_recorded_data(self, file_name):
+        self.recorder.finish_saving(file_name)
+        self.microphone.finish_saving(file_name)
+
     def update_flow(self, value):
         """
         Actualiza el flujo de acuerdo a lo leido por el controlador de flujo
@@ -668,10 +702,13 @@ class Player(QtCore.QThread):
                 self.playing.clear()
                 #print('Score executed')
                 self.finished_score.emit()
+                self.pause_saving_data()
+                #self.microphone.finish_saving('hola')
         
         self.motors_event.clear()
         self.flowSignalEvent.clear()
         print('Player thread killed')
+
 
     def move_to_state(self, desired_state, T=None, deformation=1, acc=50, dec=50, onlyCartesian=False, onlyFlow=False):
         """
@@ -721,6 +758,7 @@ class Player(QtCore.QThread):
             self.move_to_state(position)
             paused = False
             while abs(self.state.r - self.initial_position['r']) > 0.2 or abs(self.state.theta - self.initial_position['theta']) > 0.2 or abs(self.state.o - self.initial_position['offset']) > 0.2:
+                
                 if not self.performing.is_set():
                     self.stop()
                     return
@@ -732,6 +770,7 @@ class Player(QtCore.QThread):
                     if paused:
                         self.move_to_state(position)
                         paused = False
+                sleep(0.1)
             self.finished_initial_positioning.emit()
 
             all_actions = []
@@ -763,7 +802,7 @@ class Player(QtCore.QThread):
                         paused = True
                         t_pause = time()
                         self.stop()
-                    sleep(0.05)
+                    sleep(0.1)
                 else:
                     if paused:
                         paused = False
@@ -798,7 +837,7 @@ class Player(QtCore.QThread):
                                 last_tf = action['data']['time']
                                 last_ti = action['ti']
                             else:
-                                last_tf -= (action['ti'] - last_ti)
+                                last_tf -= (action['data']['time'] - last_ti)
                             if len(all_actions):
                                 next_t = all_actions[0]['ti']
                         else: # si es instrucción de los dedos
@@ -809,11 +848,12 @@ class Player(QtCore.QThread):
                                 last_tf = action['data']['time']
                                 last_ti = action['ti']
                             else:
-                                last_tf -= (action['ti'] - last_ti)
+                                last_tf -= (action['data']['time'] - last_ti)
                             if len(all_actions):
                                 next_t = all_actions[0]['ti']
+                        print(last_tf)
                     else:
-                        sleep(0.05)
+                        sleep(0.1)
             t0 = time()
             paused = False
             t_pause = 0
@@ -826,11 +866,14 @@ class Player(QtCore.QThread):
                         self.stop()
                         t_pause = time()
                         paused = True
-                else:
-                    if paused:
-                        self.move_to_state(position)
-                        t0 += time() - t_pause
-                        paused = False
+                    else:
+                        if paused:
+                            self.move_to_state(position)
+                            t0 += time() - t_pause
+                            paused = False
+                sleep(0.1)
+                #print(time() - t0, last_tf)
+
         # print(self.phrase_instructions)
         # print(self.finger_instructions)
 

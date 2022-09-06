@@ -31,6 +31,8 @@ z_event.set()
 z_driver = AMCIDriver('192.168.2.103', z_event, connected=connected, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'])#, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'])
 z_driver.start()
 
+#v405
+
 alpha_event = threading.Event()
 alpha_event.set()
 alpha_driver = AMCIDriver('192.168.2.102', alpha_event, connected=connected, starting_speed=1, motors_step_turn=10000)#, input_1_function_bits=INPUT_FUNCTION_BITS['Home'])

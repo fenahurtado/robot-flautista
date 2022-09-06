@@ -70,6 +70,8 @@ class Window(QMainWindow, Ui_MainWindow):
         self.fingersScoreLayout.setAlignment(Qt.AlignLeft)
         self.filename = None
         self.base_path = os.path.dirname(os.path.realpath(__file__))
+        self.last_path = self.base_path
+        print(self.base_path)
         #self.performing = False
         #self.playing = False
         #self.vars = read_variables()
@@ -229,11 +231,13 @@ class Window(QMainWindow, Ui_MainWindow):
             # while QApplication.hasPendingEvents():
             #     QApplication.processEvents()
             self.moveBox.set_values(self.state)
+            self.musician.pause_saving_data()
 
         else:
             self.pauseButton.setText('Pause')
             self.moveBox.disableButtons()
             self.musician.playing.set()
+            self.musician.resume_saving_data()
     
     def execute_score(self):
         '''
@@ -264,6 +268,8 @@ class Window(QMainWindow, Ui_MainWindow):
 
         if self.initialPositionLayout.count():
             self.initialPositionLayout.itemAt(0).widget().paint_green()
+        
+        self.musician.start_saving_data()
 
     def stop(self):
         '''
@@ -294,6 +300,31 @@ class Window(QMainWindow, Ui_MainWindow):
         while self.musician.moving():
             pass
         self.moveBox.set_values(self.state)
+
+        msg = QMessageBox()
+        #msg.setIcon(QMessageBox.Critical)
+        msg.setText("Save the data recorded during execution?")
+        msg.setInformativeText("Data will be lost if you don't save them.")
+        msg.setWindowTitle("Save data?")
+        dont_save_button = msg.addButton("Don't save", QtWidgets.QMessageBox.NoRole)
+        save_button = msg.addButton("Save", QtWidgets.QMessageBox.YesRole)
+
+        retval = msg.exec_()
+        if retval == 0: # don't save
+            pass
+        elif retval == 1: # save
+            self.save_recorded_data()
+
+    def save_recorded_data(self):
+        fname, _ = QFileDialog.getSaveFileName(self, 'Open file', self.base_path,"CSV files (*.csv)")
+        if fname[-4:] != '.csv':
+            fname += '.csv'
+        self.last_path = os.path.split(fname)[0]
+        fname2, _ = QFileDialog.getSaveFileName(self, 'Open file', self.last_path,"WAV files (*.wav)")
+        if fname[-4:] != '.wav':
+            fname += '.wav'
+        self.last_path = os.path.split(fname2)[0]
+        self.musician.save_recorded_data(fname, fname2)
 
     def change_playing_initial_position(self):
         '''
@@ -426,6 +457,7 @@ class Window(QMainWindow, Ui_MainWindow):
         if fname[-5:] != '.json':
             fname += '.json'
         self.filename = fname
+        self.base_path = os.path.split(fname)[0]
         self.save()
 
     def clean_score(self):
@@ -707,7 +739,7 @@ class Window(QMainWindow, Ui_MainWindow):
         if rsp:
             startPosAction = ActionWidget(data, 'Move to initial position', width=2, parent=self,
                                           context=self.initialPositionLayout, index=0)
-            self.initialPositionLayout.insertWidget(0, startPosAction)
+            self.saving = self.initialPositionLayout.insertWidget(0, startPosAction)
             #self.phrase_actions.insert(0, {'type': 0, 'data': data})
             #self.finger_actions.insert(0, {'note': data['key']})
             self.initial_position = data

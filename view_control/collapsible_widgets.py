@@ -175,7 +175,7 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
         self.comboBoxNote.currentIndexChanged.connect(self.change_note)
 
     def change_note(self, value):
-        print(self.comboBoxNote.itemText(value))
+        #print(self.comboBoxNote.itemText(value))
         self.parent.musician.execute_fingers_action(self.comboBoxNote.itemText(value), through_action=False)
 
     def add_notes(self, instrument):

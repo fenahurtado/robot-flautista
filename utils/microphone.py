@@ -8,6 +8,7 @@ import threading
 import random
 from functools import partial
 from librosa import yin
+from scipy.io.wavfile import write
 
 class Microphone(threading.Thread):
     def __init__(self, running):
@@ -24,15 +25,36 @@ class Microphone(threading.Thread):
         l  = 0.995
         self.B2  = [1, -2*np.cos(2*np.pi*fo/44100), 1]
         self.A2  = [1, -2*l*np.cos(2*np.pi*fo/44100), l**2]
+        self.saving = False
+        self.data = np.array([])
 
     def micCallback(self, indata, frames, time, status):
         if status:
             print('Status:', status)
         self.last_mic_data = np.hstack((self.last_mic_data, np.transpose(indata)[0]))
         self.last_mic_data = self.last_mic_data[-self.max_num_points:]
+        if self.saving:
+            self.data = np.hstack((self.data, np.transpose(indata)[0]))
+            #print(self.data.size)
+
+    def start_saving(self):
+        self.data = np.array([])
+        self.saving = True
+    
+    def pause_saving(self):
+        self.saving = False
+
+    def resume_saving(self):
+        self.saving = True
+    
+    def finish_saving(self, file_name):
+        self.saving = False
+        print(self.data.size)
+        write(file_name, 44100, self.data)
+        #self.data.to_csv(file_name)
 
     def run(self):
-        with sd.InputStream(samplerate=self.sr, channels=1, callback=self.micCallback, latency='low'):
+        with sd.InputStream(samplerate=self.sr, channels=1, callback=self.micCallback, latency='high'): #, device=6
             while self.running.is_set():
                 sd.sleep(50)
                 #pitches, harmonic_rates, argmins, times = compute_yin(self.last_mic_data, self.sr, f0_max=2000)#, w_len=int(len(self.last_mic_data)-1), harmo_thresh=0.1,f0_max=self.sr/2, w_step=int(len(self.last_mic_data)-1)) 

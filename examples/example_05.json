@@ -1,0 +1,48 @@
+{
+    "fingers": [
+        {
+            "note": "C4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "D4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "E4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "E4",
+            "time": 1.0,
+            "type": 2
+        }
+    ],
+    "init_pos": {
+        "offset": 125.0,
+        "r": 140.0,
+        "theta": 45.0,
+        "type": 0
+    },
+    "phrase": [
+        {
+            "acceleration": 0,
+            "deceleration": 0,
+            "deformation": 1,
+            "flow": 0,
+            "jerk": 0,
+            "move": 0,
+            "offset": 139.0,
+            "r": 156.54,
+            "theta": 45.0,
+            "time": 10.0,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        }
+    ],
+    "timestamp": "05/09/2022 15:07:11"
+}
