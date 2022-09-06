@@ -683,9 +683,9 @@ class Player(QtCore.QThread):
         self.recorder.resume_saving()
         self.microphone.resume_saving()
 
-    def save_recorded_data(self, file_name):
-        self.recorder.finish_saving(file_name)
-        self.microphone.finish_saving(file_name)
+    def save_recorded_data(self, file_name1, file_name2):
+        self.recorder.finish_saving(file_name1)
+        self.microphone.finish_saving(file_name2)
 
     def update_flow(self, value):
         """
@@ -834,10 +834,10 @@ class Player(QtCore.QThread):
                             self.execute_phrase_action(action)
                             phrase_actions_executed += 1
                             if action['ti'] + action['data']['time'] > last_tf:
-                                last_tf = action['data']['time']
-                                last_ti = action['ti']
-                            else:
-                                last_tf -= (action['data']['time'] - last_ti)
+                                last_tf = action['ti'] + action['data']['time']
+                            last_ti = action['ti']
+                            # else:
+                            #     last_tf -= (action['data']['time'] - last_ti)
                             if len(all_actions):
                                 next_t = all_actions[0]['ti']
                         else: # si es instrucción de los dedos
@@ -845,10 +845,10 @@ class Player(QtCore.QThread):
                             self.execute_fingers_action(action)
                             finger_actions_executed += 1
                             if action['ti'] + action['data']['time'] > last_tf:
-                                last_tf = action['data']['time']
-                                last_ti = action['ti']
-                            else:
-                                last_tf -= (action['data']['time'] - last_ti)
+                                last_tf = action['ti'] + action['data']['time']
+                            last_ti = action['ti']
+                            # else:
+                            #     last_tf -= (action['data']['time'] - last_ti)
                             if len(all_actions):
                                 next_t = all_actions[0]['ti']
                         print(last_tf)
@@ -857,7 +857,7 @@ class Player(QtCore.QThread):
             t0 = time()
             paused = False
             t_pause = 0
-            while time() - t0 < last_tf and not paused:
+            while time() - t0 < last_tf - last_ti and not paused:
                 if not self.performing.is_set():
                     self.stop()
                     return

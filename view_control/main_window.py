@@ -321,8 +321,8 @@ class Window(QMainWindow, Ui_MainWindow):
             fname += '.csv'
         self.last_path = os.path.split(fname)[0]
         fname2, _ = QFileDialog.getSaveFileName(self, 'Open file', self.last_path,"WAV files (*.wav)")
-        if fname[-4:] != '.wav':
-            fname += '.wav'
+        if fname2[-4:] != '.wav':
+            fname2 += '.wav'
         self.last_path = os.path.split(fname2)[0]
         self.musician.save_recorded_data(fname, fname2)
 

@@ -1,3 +1,5 @@
+/home/fernando/Dropbox/UC/Magister/robot-flautista/data/escala.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_05.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_05.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_05.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_05.json

@@ -7,8 +7,8 @@ const uint8_t servo_pins[n_keys] = {44, 46, 47, 48, 43, 50, 51, 42, 53}; // Pine
 // const uint8_t keys[n_keys] = {22, 23, 24, 25, 26, 27, 28, 29, 30}; // Pines digitales
 
 Servo servos[n_keys]; // Arreglo de servos
-int angle_down[n_keys] = {120,120,120,120,120,120,120,120,120};
-int angle_up[n_keys] = {130,130,130,130,130,130,130,130,130};
+int angle_up[n_keys] = {95,85,70,150,100,105,90,75,95};
+int angle_down[n_keys] = {135,115,100,120,120,120,130,110,115};
 byte serial_msg[n_bytes]; // Bytes de lectura serial
 bool pressed; // Booleano para indicar el estado de una llave
 
@@ -23,6 +23,9 @@ void setup() {
     servos[i].attach(servo_pins[i], 500, 2400);
 
     // LLeva servos a posición neutral
+    for (uint8_t i = 0; i < n_keys; i++) {
+    servos[i].write(angle_up[i]);
+    }
   }
 
   // Inicializa comunicación serial
@@ -45,8 +48,8 @@ void loop() {
       // digitalWrite(keys[i], pressed);
       
       // Acciona y desacciona los servos
-      if (pressed) servos[i].write(angle_up[i]);
-      else servos[i].write(angle_down[i]);
+      if (pressed) servos[i].write(angle_down[i]);
+      else servos[i].write(angle_up[i]);
     }
   }
 }

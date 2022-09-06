@@ -1,7 +1,37 @@
 {
     "fingers": [
         {
-            "note": "C4",
+            "note": "D3",
+            "time": 3.0,
+            "type": 2
+        },
+        {
+            "note": "E3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "F#3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "G3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "A3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "B3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "C#4",
             "time": 1.0,
             "type": 2
         },
@@ -9,40 +39,45 @@
             "note": "D4",
             "time": 1.0,
             "type": 2
-        },
-        {
-            "note": "E4",
-            "time": 1.0,
-            "type": 2
-        },
-        {
-            "note": "E4",
-            "time": 1.0,
-            "type": 2
         }
     ],
     "init_pos": {
-        "offset": 125.0,
-        "r": 140.0,
+        "offset": 0.0,
+        "r": 20.0,
         "theta": 45.0,
         "type": 0
     },
     "phrase": [
         {
+            "acceleration": 30.0,
+            "deceleration": 30.0,
+            "deformation": 1,
+            "flow": 10.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": 1.5,
+            "r": 11.0,
+            "theta": 54.0,
+            "time": 2.0,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
             "acceleration": 0,
             "deceleration": 0,
             "deformation": 1,
-            "flow": 0,
+            "flow": 10.0,
             "jerk": 0,
             "move": 0,
-            "offset": 139.0,
-            "r": 156.54,
-            "theta": 45.0,
-            "time": 10.0,
+            "offset": 1.5,
+            "r": 11.0,
+            "theta": 54.0,
+            "time": 8.0,
             "type": 1,
             "vibrato_amp": 0,
             "vibrato_freq": 0
         }
     ],
-    "timestamp": "05/09/2022 15:07:11"
+    "timestamp": "06/09/2022 13:54:12"
 }
