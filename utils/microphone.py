@@ -54,7 +54,7 @@ class Microphone(threading.Thread):
         #self.data.to_csv(file_name)
 
     def run(self):
-        with sd.InputStream(samplerate=self.sr, channels=1, device=6, callback=self.micCallback, latency='high'): #, device=6
+        with sd.InputStream(samplerate=self.sr, channels=1, callback=self.micCallback, latency='high'): #, device=6
             while self.running.is_set():
                 sd.sleep(50)
                 #pitches, harmonic_rates, argmins, times = compute_yin(self.last_mic_data, self.sr, f0_max=2000)#, w_len=int(len(self.last_mic_data)-1), harmo_thresh=0.1,f0_max=self.sr/2, w_step=int(len(self.last_mic_data)-1)) 

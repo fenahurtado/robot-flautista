@@ -773,6 +773,7 @@ class AMCIDriver(QtCore.QThread):
 
         self.request_write_return_to_command_mode()
         self.request_write_run_assembled_move(motor_current=motor_current, blend_direction=blend_direction, dwell_move=dwell_move, dwell_time=dwell_time)
+        print('Requested move', self.hostname)
 
     def request_write_synchrostep_move(self, position, direction, speed=200, acceleration=100, deceleration=100, proportional_coefficient=1, network_delay=0):
         #print(target_position, programmed_speed)

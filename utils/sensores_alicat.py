@@ -22,7 +22,7 @@ class FlowController(QtCore.QThread):
         self.poller                  = threading.Thread(
             target=poll.poll, args=(device,), kwargs={
                 'address':      (self.hostname, 44818),
-                'cycle':        0.01,
+                'cycle':        0.05,
                 'timeout':      0.5,
                 'process':      self.process_incoming_data,
                 'params':       self.params,

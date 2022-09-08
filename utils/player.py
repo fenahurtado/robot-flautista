@@ -290,8 +290,8 @@ class MotorsController(threading.Thread):
             alpha_f = self.alpha_angle_to_units(alpha_points[i+1])
             t_f = temps[i+1]
 
-            x_step = {'pos': int(x_f - x), 'speed': max(1,int(abs(x_f - x) / (t_f - t))), 'acc': 100, 'dec': 100, 'jerk': 0}
-            z_step = {'pos': int(z_f - z), 'speed': max(1,int(abs(z_f - z) / (t_f - t))), 'acc': 100, 'dec': 100, 'jerk': 0}
+            x_step = {'pos': int(x_f - x), 'speed': max(1,int(abs(x_f - x) / (t_f - t))), 'acc': 5000, 'dec': 5000, 'jerk': 0}
+            z_step = {'pos': int(z_f - z), 'speed': max(1,int(abs(z_f - z) / (t_f - t))), 'acc': 5000, 'dec': 5000, 'jerk': 0}
             alpha_step = {'pos': int(alpha_f - alpha), 'speed': max(1,int(abs(alpha_f - alpha) / (t_f - t))), 'acc': 5000, 'dec': 5000, 'jerk': 0}
             
             steps['x'].append(x_step)
@@ -319,8 +319,7 @@ class MotorsController(threading.Thread):
             return 0
 
         x_points, z_points, alpha_points, d = self.get_route_positions(*self.state.cart_coords(), *desired_state.cart_coords(), divisions=12, plot=False)
-
-        print(x_points)
+        #print(x_points)
         
         if not T:
             T = 0.1
@@ -333,7 +332,7 @@ class MotorsController(threading.Thread):
         else:
             if self.max_dist_rec(acc, dec, T) < d[-1]:
                 print(f'Impossible to achieve such position with given acceleration and deceleration. {d[-1]} > {self.max_dist_rec(acc, dec, T)}')
-                return
+                return 0
 
         vel, t_acc, t_dec = self.plan_speed_curve(d[-1], acc, dec, T)
         temps = self.plan_temps_according_to_speed(d, vel, t_acc, t_dec, acc, dec)
@@ -586,6 +585,8 @@ class FlowSignalGenerator(threading.Thread):
         while self.running.is_set():
             t = time() - self.t0
             #print(t, self.T)
+            if self.T is None:
+                self.T = 0
             if t < self.T:
                 ramp = self.Fi + (self.Ff-self.Fi) * (t / self.T) ** self.deformation
                 vibr = self.vibrato_amp * np.sin(t * 2*np.pi * self.vibrato_freq)
@@ -736,7 +737,7 @@ class Player(QtCore.QThread):
             self.motors_controller.move_cartesians_only(desired_state)
         else:
             T = self.motors_controller.move_to(desired_state, acc, dec, T)
-            
+
             if self.state.flow != desired_state.flow or self.state.vibrato_freq != desired_state.vibrato_freq or self.state.vibrato_amp != desired_state.vibrato_amp:
                 self.flow_reference_signal.move_to(desired_state, T, deformation)
                 self.state.vibrato_freq = desired_state.vibrato_freq
@@ -752,7 +753,7 @@ class Player(QtCore.QThread):
         """
 
         #print(self.initial_position)
-
+        SLEEP = 0.05
         if self.initial_position:
             position = State(self.initial_position['r'], self.initial_position['theta'], self.initial_position['offset'], 0)
             self.move_to_state(position)
@@ -770,7 +771,7 @@ class Player(QtCore.QThread):
                     if paused:
                         self.move_to_state(position)
                         paused = False
-                sleep(0.1)
+                sleep(SLEEP)
             self.finished_initial_positioning.emit()
 
             all_actions = []
@@ -802,7 +803,7 @@ class Player(QtCore.QThread):
                         paused = True
                         t_pause = time()
                         self.stop()
-                    sleep(0.1)
+                    sleep(SLEEP)
                 else:
                     if paused:
                         paused = False
@@ -851,9 +852,9 @@ class Player(QtCore.QThread):
                             #     last_tf -= (action['data']['time'] - last_ti)
                             if len(all_actions):
                                 next_t = all_actions[0]['ti']
-                        print(last_tf)
+                        #print(last_tf)
                     else:
-                        sleep(0.1)
+                        sleep(SLEEP)
             t0 = time()
             paused = False
             t_pause = 0
@@ -871,7 +872,7 @@ class Player(QtCore.QThread):
                             self.move_to_state(position)
                             t0 += time() - t_pause
                             paused = False
-                sleep(0.1)
+                sleep(SLEEP)
                 #print(time() - t0, last_tf)
 
         # print(self.phrase_instructions)

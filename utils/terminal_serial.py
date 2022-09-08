@@ -48,7 +48,7 @@ class SerialPort(threading.Thread):
                 if self.verbose:
                     print('>>', data_str, end='') 
 
-            time.sleep(0.01)
+            time.sleep(0.05)
 
         self.ser.close()
         print("End.")

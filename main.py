@@ -47,7 +47,7 @@ microphone.start()
 fingers_event = threading.Event()
 fingers_event.set()
 ## TEFO: '/dev/cu.usbserial-142420'
-fingers_driver = FingersDriver('/dev/ttyUSB1', fingers_event, connected=connected)
+fingers_driver = FingersDriver('/dev/ttyUSB0', fingers_event, connected=connected)
 fingers_driver.start()
 
 state = State(0, 0, 0, 0)

@@ -1,0 +1,8 @@
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/Saltos_2.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/Saltos.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/Saltos.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/Saltos.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/Saltos.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/octavas.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/octavas.json

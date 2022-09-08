@@ -798,7 +798,7 @@ class Window(QMainWindow, Ui_MainWindow):
         else:
             rsp = True
         if rsp:
-            while not self.validate_action(data):
+            while not self.validate_action(data, pos):
                 msg = QMessageBox()
                 msg.setText("There was an error while submiting the action.")
                 msg.setInformativeText("You need to change the parameters to fit the restrictions.")
@@ -855,11 +855,30 @@ class Window(QMainWindow, Ui_MainWindow):
             v_f = 0
         return r, theta, o, f, v_a, v_f
      
-    def validate_action(self, actionData):
+    def validate_action(self, actionData, pos):
         '''
         Esta función se usa para validar que una acción de la frase musical sea posible de realizar.
         '''
-        print("TO-DO: validate action")
+        #print("TO-DO: validate action")
+        #print(actionData)
+        if not actionData['move']:
+            return True
+
+        r, theta, o, f, v_a, v_f = self.get_previous_pos(pos)
+        prevous_state = State(r, theta, o, f, vibrato_amp=v_a, vibrato_freq=v_f)
+        desired_state = State(actionData['r'], actionData['theta'], actionData['offset'], actionData['flow'], vibrato_freq=actionData['vibrato_freq'], vibrato_amp=actionData['vibrato_amp'])
+        x_points, z_points, alpha_points, d = self.musician.motors_controller.get_route_positions(*prevous_state.cart_coords(), *desired_state.cart_coords(), divisions=12, plot=False)
+        acc = actionData['acceleration']
+        dec = actionData['deceleration']
+
+        if acc == 0 or dec == 0:
+            return False
+            
+        T   = actionData['time']
+        if self.musician.motors_controller.max_dist_rec(acc, dec, T) < d[-1]:
+            print(f'Impossible to achieve such position with given acceleration and deceleration. {d[-1]} > {self.musician.motors_controller.max_dist_rec(acc, dec, T)}')
+            return False
+
         return True
 
     def select_instrument(self):
