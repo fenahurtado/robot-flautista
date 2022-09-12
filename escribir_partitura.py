@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime
 
-t_negra = 0.25
+t_negra = 0.8
 
 correccion_radio  = 0
 correccion_theta  = 0
@@ -127,6 +127,138 @@ fingers = [
         #     "note": "D3",
         #     "time": 2
         # }
+        {
+            "note": "E5",
+            "time": 0.25
+        },
+        {
+            "note": "D#5",
+            "time": 0.25
+        },
+        {
+            "note": "D5",
+            "time": 0.25
+        },
+        {
+            "note": "C#5",
+            "time": 0.25
+        },
+        {
+            "note": "D5",
+            "time": 0.25
+        },
+        {
+            "note": "C#5",
+            "time": 0.25
+        },
+        {
+            "note": "C5",
+            "time": 0.25
+        },
+        {
+            "note": "B4",
+            "time": 0.25
+        },
+       {
+            "note": "C5",
+            "time": 0.25
+        },
+        {
+            "note": "B4",
+            "time": 0.25
+        },
+        {
+            "note": "A#4",
+            "time": 0.25
+        },
+        {
+            "note": "A4",
+            "time": 0.25
+        },
+       {
+            "note": "G#4",
+            "time": 0.25
+        },
+        {
+            "note": "G4",
+            "time": 0.25
+        },
+        {
+            "note": "F#4",
+            "time": 0.25
+        },
+        {
+            "note": "F4",
+            "time": 0.25
+        },
+       {
+            "note": "E4",
+            "time": 0.25
+        },
+        {
+            "note": "D#4",
+            "time": 0.25
+        },
+        {
+            "note": "D4",
+            "time": 0.25
+        },
+        {
+            "note": "C#4",
+            "time": 0.25
+        },
+       {
+            "note": "D4",
+            "time": 0.25
+        },
+        {
+            "note": "C#4",
+            "time": 0.25
+        },
+        {
+            "note": "C4",
+            "time": 0.25
+        },
+        {
+            "note": "B3",
+            "time": 0.25
+        },
+       {
+            "note": "C4",
+            "time": 0.25
+        },
+        {
+            "note": "B3",
+            "time": 0.25
+        },
+        {
+            "note": "A#3",
+            "time": 0.25
+        },
+        {
+            "note": "A3",
+            "time": 0.25
+        },
+       {
+            "note": "G#3",
+            "time": 0.25
+        },
+        {
+            "note": "G3",
+            "time": 0.25
+        },
+        {
+            "note": "F#3",
+            "time": 0.25
+        },
+        {
+            "note": "F3",
+            "time": 0.25
+        },
+        {
+            "note": "E3",
+            "time": 0.5
+        }
 ]
 
 init_pos = {
@@ -136,111 +268,111 @@ init_pos = {
     }
 
 phrase  = [
-        {
-            "acceleration": 99.0,
-            "deceleration": 99.0,
-            "deformation": 1,
-            "flow": 0, #9.5,
-            "jerk": 0,
-            "move": 1,
-            "offset": 0.5,
-            "r": 8.5,
-            "theta": 40.97,
-            "time": 0.5,
-            "vibrato_amp": 0,
-            "vibrato_freq": 0
-        },
-        {
-            "move": 0,
-            "time": 0.5
-        },
-        {
-            "acceleration": 99.0,
-            "deceleration": 99.0,
-            "deformation": 1,
-            "flow": 0, #12.0,
-            "jerk": 0,
-            "move": 1,
-            "offset": -0.0,
-            "r": 7.51,
-            "theta": 44.97,
-            "time": 7.5,
-            "vibrato_amp": 0.0,
-            "vibrato_freq": 0.0
-        },
-        {
-            "move": 0,
-            "time": 1.0
-        },
-        {
-            "acceleration": 99.0,
-            "deceleration": 99.0,
-            "deformation": 1,
-            "flow": 0, #30.0,
-            "jerk": 0,
-            "move": 1,
-            "offset": 1,
-            "r": 6.51,
-            "theta": 48.0,
-            "time": 7.0,
-            "type": 1,
-            "vibrato_amp": 0,
-            "vibrato_freq": 0
-        },
-        {
-            "move": 0,
-            "time": 1.0
-        },
-        {
-            "acceleration": 99.0,
-            "deceleration": 99.0,
-            "deformation": 1,
-            "flow": 0, #12.0,
-            "jerk": 0,
-            "move": 1,
-            "offset": -0.0,
-            "r": 7.51,
-            "theta": 44.97,
-            "time": 7,
-            "vibrato_amp": 0.0,
-            "vibrato_freq": 0.0
-        },
-        {
-            "move": 0,
-            "time": 1.0
-        },
-        {
-            "acceleration": 99.0,
-            "deceleration": 99.0,
-            "deformation": 1,
-            "flow": 0, #9.5,
-            "jerk": 0,
-            "move": 1,
-            "offset": 0.5,
-            "r": 8.5,
-            "theta": 40.97,
-            "time": 7,
-            "vibrato_amp": 0,
-            "vibrato_freq": 0
-        },
-        {
-            "move": 0,
-            "time": 1
-        },
-        {
-            "acceleration": 99.0,
-            "deceleration": 99.0,
-            "deformation": 1,
-            "flow": 0.0,
-            "jerk": 0,
-            "move": 1,
-            "offset": 0.5,
-            "r": 8.5,
-            "theta": 40.97,
-            "time": 0.5,
-            "vibrato_amp": 0.1,
-            "vibrato_freq": 0.1
-        }
+        # {
+        #     "acceleration": 99.0,
+        #     "deceleration": 99.0,
+        #     "deformation": 1,
+        #     "flow": 9.5,
+        #     "jerk": 0,
+        #     "move": 1,
+        #     "offset": 0.5,
+        #     "r": 8.5,
+        #     "theta": 40.97,
+        #     "time": 0.5,
+        #     "vibrato_amp": 0,
+        #     "vibrato_freq": 0
+        # },
+        # {
+        #     "move": 0,
+        #     "time": 0.5
+        # },
+        # {
+        #     "acceleration": 99.0,
+        #     "deceleration": 99.0,
+        #     "deformation": 1,
+        #     "flow": 12.0,
+        #     "jerk": 0,
+        #     "move": 1,
+        #     "offset": -0.0,
+        #     "r": 7.51,
+        #     "theta": 44.97,
+        #     "time": 7.5,
+        #     "vibrato_amp": 0.0,
+        #     "vibrato_freq": 0.0
+        # },
+        # {
+        #     "move": 0,
+        #     "time": 1.0
+        # },
+        # {
+        #     "acceleration": 99.0,
+        #     "deceleration": 99.0,
+        #     "deformation": 1,
+        #     "flow": 30.0,
+        #     "jerk": 0,
+        #     "move": 1,
+        #     "offset": 1,
+        #     "r": 6.51,
+        #     "theta": 48.0,
+        #     "time": 7.0,
+        #     "type": 1,
+        #     "vibrato_amp": 0,
+        #     "vibrato_freq": 0
+        # },
+        # {
+        #     "move": 0,
+        #     "time": 1.0
+        # },
+        # {
+        #     "acceleration": 99.0,
+        #     "deceleration": 99.0,
+        #     "deformation": 1,
+        #     "flow": 12.0,
+        #     "jerk": 0,
+        #     "move": 1,
+        #     "offset": -0.0,
+        #     "r": 7.51,
+        #     "theta": 44.97,
+        #     "time": 7,
+        #     "vibrato_amp": 0.0,
+        #     "vibrato_freq": 0.0
+        # },
+        # {
+        #     "move": 0,
+        #     "time": 1.0
+        # },
+        # {
+        #     "acceleration": 99.0,
+        #     "deceleration": 99.0,
+        #     "deformation": 1,
+        #     "flow": 9.5,
+        #     "jerk": 0,
+        #     "move": 1,
+        #     "offset": 0.5,
+        #     "r": 8.5,
+        #     "theta": 40.97,
+        #     "time": 7,
+        #     "vibrato_amp": 0,
+        #     "vibrato_freq": 0
+        # },
+        # {
+        #     "move": 0,
+        #     "time": 1
+        # },
+        # {
+        #     "acceleration": 99.0,
+        #     "deceleration": 99.0,
+        #     "deformation": 1,
+        #     "flow": 0.0,
+        #     "jerk": 0,
+        #     "move": 1,
+        #     "offset": 0.5,
+        #     "r": 8.5,
+        #     "theta": 40.97,
+        #     "time": 0.5,
+        #     "vibrato_amp": 0.1,
+        #     "vibrato_freq": 0.1
+        # }
 ]
 
 last_flow = 0

@@ -784,19 +784,37 @@ class AMCIDriver(QtCore.QThread):
         else:
             command.desired_jog_cw = 0
             command.desired_jog_ccw = 1
-        
-        # if word1 >= 2**15:
-        #     word1 -= 2**16request_write_reset
 
         if position < 0:
-            pos_in_bits = "{0:b}".format(0).zfill(32)
+            position += 2*(2**31)
+            pos_in_bits = "{0:b}".format(position).zfill(32)
         else:
             pos_in_bits = "{0:b}".format(position).zfill(32)
-        speed_in_bits = "{0:b}".format(speed).zfill(32)
-        command.desired_command_word_2 = int(pos_in_bits[16:], 2) 
+        
+        if speed < 0:
+            speed += 2*(2**31)
+            speed_in_bits = "{0:b}".format(speed).zfill(32)
+        else:
+            speed_in_bits = "{0:b}".format(speed).zfill(32)
+        
+
+        # command.desired_command_word_2 = abs(position) // 1000 * sign(position)
+        # command.desired_command_word_3 = abs(position)  % 1000 * sign(position)
+        # command.desired_command_word_4 = abs(position) // 1000 * sign(position)
+        # command.desired_command_word_5 = abs(position)  % 1000 * sign(position)
+
+        command.desired_command_word_2 = int(pos_in_bits[16:], 2)
+        if command.desired_command_word_2 >= 2**15:
+            command.desired_command_word_2 -= 2**16
         command.desired_command_word_3 = int(pos_in_bits[:16], 2)
+        if command.desired_command_word_3 >= 2**15:
+            command.desired_command_word_3 -= 2**16
         command.desired_command_word_4 = int(speed_in_bits[16:], 2)
+        if command.desired_command_word_4 >= 2**15:
+            command.desired_command_word_4 -= 2**16
         command.desired_command_word_5 = int(speed_in_bits[:16], 2)
+        if command.desired_command_word_5 >= 2**15:
+            command.desired_command_word_5 -= 2**16
         command.desired_command_word_6 = acceleration
         command.desired_command_word_7 = deceleration
         command.desired_command_word_8 = proportional_coefficient

@@ -51,6 +51,12 @@
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_1.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_1.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_1.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_1.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_1.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_1.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_1.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_1.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_1.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala.json

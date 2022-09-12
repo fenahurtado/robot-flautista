@@ -23,19 +23,19 @@ flow_controller.start()
 
 x_event = threading.Event()
 x_event.set()
-x_driver = AMCIDriver('192.168.2.104', x_event, connected=connected, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'])#, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'])
+x_driver = AMCIDriver('192.168.2.102', x_event, connected=connected, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'])#, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'])
 x_driver.start()
 
 z_event = threading.Event()
 z_event.set()
-z_driver = AMCIDriver('192.168.2.103', z_event, connected=connected, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'])#, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'])
+z_driver = AMCIDriver('192.168.2.104', z_event, connected=connected, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'])#, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'])
 z_driver.start()
 
 #v405
 
 alpha_event = threading.Event()
 alpha_event.set()
-alpha_driver = AMCIDriver('192.168.2.102', alpha_event, connected=connected, starting_speed=1, motors_step_turn=10000)#, input_1_function_bits=INPUT_FUNCTION_BITS['Home'])
+alpha_driver = AMCIDriver('192.168.2.103', alpha_event, connected=connected, starting_speed=1, motors_step_turn=10000)#, input_1_function_bits=INPUT_FUNCTION_BITS['Home'])
 alpha_driver.start()
 
 microphone_event = threading.Event()

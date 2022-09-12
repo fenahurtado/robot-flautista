@@ -302,6 +302,25 @@ class MotorsController(threading.Thread):
         #print(steps['x'])
         return steps
 
+    def get_route(self, initial_state, final_state, acc=20, dec=20, T=None):
+        x_points, z_points, alpha_points, d = self.get_route_positions(*initial_state.cart_coords(), *final_state.cart_coords(), divisions=12, plot=False)
+        if not T:
+            T = 0.1
+            while True:
+                if not self.max_dist_rec(acc, dec, T) < d[-1]:
+                    break
+                T += 0.1
+            T = T*2
+        else:
+            if self.max_dist_rec(acc, dec, T) < d[-1]:
+                print(f'Impossible to achieve such position with given acceleration and deceleration. {d[-1]} > {self.max_dist_rec(acc, dec, T)}')
+                return None
+        vel, t_acc, t_dec = self.plan_speed_curve(d[-1], acc, dec, T)
+        temps = self.plan_temps_according_to_speed(d, vel, t_acc, t_dec, acc, dec)
+        route = self.plan_route(x_points, z_points, alpha_points, temps)
+        return route
+        
+
     def move_to(self, desired_state, acc=20, dec=20, T=None):
         """
         Función para llamar desde cualquier thread. Setea los parámetros necesarios para que después se ejecute (desde el thread del controlador) la trayectoria desde el estado actual hasta desired_state siguiendo las trayectorias del sistema
