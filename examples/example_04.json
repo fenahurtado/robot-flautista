@@ -1,43 +1,129 @@
 {
     "fingers": [
         {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
             "note": "C4",
-            "time": 1.0,
+            "time": 0.2,
             "type": 2
         },
         {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
             "note": "D4",
-            "time": 1.0,
+            "time": 0.1,
             "type": 2
         },
         {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
             "note": "E4",
-            "time": 1.0,
+            "time": 0.1,
+            "type": 2
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "note": "F4",
+            "time": 0.1,
+            "type": 2
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "note": "G4",
+            "time": 0.1,
+            "type": 2
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "note": "A4",
+            "time": 0.1,
+            "type": 2
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "note": "B4",
+            "time": 0.1,
+            "type": 2
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "note": "C5",
+            "time": 0.2,
             "type": 2
         }
     ],
     "init_pos": {
-        "offset": 120.0,
-        "r": 125.0,
-        "theta": 45.0,
+        "offset": -0.5,
+        "r": 6.5,
+        "theta": 45.5,
         "type": 0
     },
     "phrase": [
         {
-            "acceleration": 0,
-            "deceleration": 0,
-            "deformation": 1,
-            "flow": 0,
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "deformation": 0,
+            "flow": 18.5,
+            "jerk": 0,
+            "move": 1,
+            "offset": -0.5,
+            "r": 6.5,
+            "theta": 45.5,
+            "time": 0.1,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "deformation": 0,
+            "flow": 18.5,
             "jerk": 0,
             "move": 0,
-            "offset": 100.0,
-            "r": 100.0,
-            "theta": 45.0,
-            "time": 3.0,
+            "offset": -0.5,
+            "r": 6.5,
+            "theta": 45.5,
+            "time": 0.12263618185225045,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "deformation": 0,
+            "flow": 29.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": -2.0,
+            "r": 5.0,
+            "theta": 50.0,
+            "time": 0.5773638181477495,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "deformation": 0,
+            "flow": 29.0,
+            "jerk": 0,
+            "move": 0,
+            "offset": -2.0,
+            "r": 5.0,
+            "theta": 50.0,
+            "time": 0.2,
             "type": 1,
             "vibrato_amp": 0,
             "vibrato_freq": 0
         }
     ],
-    "timestamp": "05/09/2022 13:39:14"
+    "timestamp": "22/10/2022 09:33:11"
 }

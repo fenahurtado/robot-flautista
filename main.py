@@ -47,7 +47,10 @@ microphone.start()
 fingers_event = threading.Event()
 fingers_event.set()
 ## TEFO: '/dev/cu.usbserial-142420'
-fingers_driver = FingersDriver('/dev/ttyUSB0', fingers_event, connected=connected)
+try:
+    fingers_driver = FingersDriver('/dev/ttyUSB0', fingers_event, connected=connected)
+except:
+    fingers_driver = FingersDriver('/dev/ttyUSB1', fingers_event, connected=connected)
 fingers_driver.start()
 
 state = State(0, 0, 0, 0)
@@ -63,7 +66,6 @@ app = QApplication(sys.argv)
 
 win = Window(app, preasure_sensor_event, flow_controler_event, x_event, z_event, alpha_event, microphone_event,
              fingers_event, musician_event, musician, state)
-
 win.show()
 
 sys.exit(app.exec())

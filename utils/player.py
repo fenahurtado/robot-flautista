@@ -11,6 +11,7 @@ from utils.microphone import Microphone
 from utils.sensores_alicat import FlowController, PreasureSensor
 from view_control.amci_control import AMCIWidget
 from view_control.main_window import Window
+from utils.motor_control import *
 
 from utils.cinematica import *
 
@@ -491,14 +492,31 @@ class Recorder:
     """
     Esta clase se encarga de almacenar la historia de las variables medidas. windowWidth dice la cantidad de datos a almacenar e interval el tiempo (en milisegundos) para obtener una muestra.
     """
-    def __init__(self, flowController, pressureSensor, microphone, position, motors_controller, windowWidth=200, interval=10):
+    def __init__(self, x_driver, z_driver, alpha_driver, flow_controller, preasure_sensor, x_reference, z_reference, alpha_reference, flow_reference, microphone, windowWidth=200, interval=10):
         self.saving = False
-        self.flowController = flowController
-        self.pressureSensor = pressureSensor
+        self.x_driver = x_driver
+        self.z_driver = z_driver
+        self.alpha_driver = alpha_driver
+        self.flow_controller = flow_controller
+        self.preasure_sensor = preasure_sensor
+        self.x_reference = x_reference
+        self.z_reference = z_reference
+        self.alpha_reference = alpha_reference
+        self.flow_reference = flow_reference
         self.microphone = microphone
-        self.position = position
-        self.motors_controller = motors_controller
         self.windowWidth = windowWidth
+        self.ref_state = State(0,0,0,0)
+        self.real_state = State(0,0,0,0)
+
+        self.ref_state.x = x_units_to_mm(self.x_reference.ref)
+        self.ref_state.z = z_units_to_mm(self.z_reference.ref)
+        self.ref_state.alpha = alpha_units_to_angle(self.alpha_reference.ref)
+        self.ref_state.flow = self.flow_reference.ref
+        self.real_state.x = x_units_to_mm(self.x_driver.motor_position)
+        self.real_state.z = z_units_to_mm(self.z_driver.motor_position)
+        self.real_state.alpha = alpha_units_to_angle(self.alpha_driver.motor_position)
+        self.real_state.flow = self.flow_controller.values['vol_flow']
+
         self.flow_ref = linspace(0,0,self.windowWidth)
         self.x_ref = linspace(0,0,self.windowWidth)
         self.z_ref = linspace(0,0,self.windowWidth)
@@ -509,6 +527,9 @@ class Recorder:
         self.radius = linspace(0,0,self.windowWidth)
         self.theta = linspace(0,0,self.windowWidth)
         self.offset = linspace(0,0,self.windowWidth)
+        self.radius_ref = linspace(0,0,self.windowWidth)
+        self.theta_ref = linspace(0,0,self.windowWidth)
+        self.offset_ref = linspace(0,0,self.windowWidth)
         self.mouth_pressure = linspace(0,0,self.windowWidth)
         self.volume_flow = linspace(0,0,self.windowWidth)
         self.mass_flow = linspace(0,0,self.windowWidth)
@@ -516,54 +537,82 @@ class Recorder:
         self.frequency = linspace(0,0,self.windowWidth)
         self.times = linspace(0,0,self.windowWidth)
         self.t0 = time()
+        self.first_entry = False
+        self.t1 = 0
 
-        self.data = pd.DataFrame(columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
+        self.data = pd.DataFrame(columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'offset_ref', 'theta_ref', 'radius_ref', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
 
         self.interval = interval
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
+        self.timer.start(interval)
         
     def start(self):
         self.timer.start(self.interval)
 
     def update(self):
-        self.flow_ref[:-1] = self.flow_ref[1:]                      # shift data in the temporal mean 1 sample left
-        self.flow_ref[-1] = self.flowController.values['set_point']
+        #self.flow_ref[:-1] = self.flow_ref[1:]                      # shift data in the temporal mean 1 sample left
+        #self.flow_ref[-1] = self.flowController.values['set_point']
+        
+        self.ref_state.x = x_units_to_mm(self.x_reference.ref)
+        self.ref_state.z = z_units_to_mm(self.z_reference.ref)
+        self.ref_state.alpha = alpha_units_to_angle(self.alpha_reference.ref)
+        self.ref_state.flow = self.flow_reference.ref
+        self.real_state.x = x_units_to_mm(self.x_driver.motor_position)
+        self.real_state.z = z_units_to_mm(self.z_driver.motor_position)
+        self.real_state.alpha = alpha_units_to_angle(self.alpha_driver.motor_position)
+        self.real_state.flow = self.flow_controller.values['vol_flow']
+
         self.x_ref[:-1] = self.x_ref[1:]                      # shift data in the temporal mean 1 sample left
-        self.x_ref[-1] = self.motors_controller.x_ref
+        self.x_ref[-1] = self.ref_state.x
         self.z_ref[:-1] = self.z_ref[1:]                      # shift data in the temporal mean 1 sample left
-        self.z_ref[-1] = self.motors_controller.z_ref
+        self.z_ref[-1] = self.ref_state.z
         self.alpha_ref[:-1] = self.alpha_ref[1:]                      # shift data in the temporal mean 1 sample left
-        self.alpha_ref[-1] = self.motors_controller.alpha_ref
+        self.alpha_ref[-1] = self.ref_state.alpha
+        self.flow_ref[:-1] = self.flow_ref[1:]                      # shift data in the temporal mean 1 sample left
+        self.flow_ref[-1] = self.ref_state.flow
         self.x[:-1] = self.x[1:]                      # shift data in the temporal mean 1 sample left
-        self.x[-1] = self.position.x
+        self.x[-1] = self.real_state.x
         self.z[:-1] = self.z[1:]                      # shift data in the temporal mean 1 sample left
-        self.z[-1] = self.position.z
+        self.z[-1] = self.real_state.z
         self.alpha[:-1] = self.alpha[1:]                      # shift data in the temporal mean 1 sample left
-        self.alpha[-1] = self.position.alpha
-        self.radius[:-1] = self.radius[1:]                      # shift data in the temporal mean 1 sample left
-        self.radius[-1] = self.position.r
-        self.theta[:-1] = self.theta[1:]                      # shift data in the temporal mean 1 sample left
-        self.theta[-1] = self.position.theta
-        self.offset[:-1] = self.offset[1:]                      # shift data in the temporal mean 1 sample left
-        self.offset[-1] = self.position.o
-        self.mouth_pressure[:-1] = self.mouth_pressure[1:]                      # shift data in the temporal mean 1 sample left
-        self.mouth_pressure[-1] = self.pressureSensor.values['pressure']
+        self.alpha[-1] = self.real_state.alpha
         self.volume_flow[:-1] = self.volume_flow[1:]                      # shift data in the temporal mean 1 sample left
-        self.volume_flow[-1] = self.flowController.values['vol_flow']
+        self.volume_flow[-1] = self.real_state.flow
+
+        self.radius[:-1] = self.radius[1:]                      # shift data in the temporal mean 1 sample left
+        self.radius[-1] = self.real_state.r
+        self.theta[:-1] = self.theta[1:]                      # shift data in the temporal mean 1 sample left
+        self.theta[-1] = self.real_state.theta
+        self.offset[:-1] = self.offset[1:]                      # shift data in the temporal mean 1 sample left
+        self.offset[-1] = self.real_state.o
+        self.radius_ref[:-1] = self.radius_ref[1:]                      # shift data in the temporal mean 1 sample left
+        self.radius_ref[-1] = self.ref_state.r
+        self.theta_ref[:-1] = self.theta_ref[1:]                      # shift data in the temporal mean 1 sample left
+        self.theta_ref[-1] = self.ref_state.theta
+        self.offset_ref[:-1] = self.offset_ref[1:]                      # shift data in the temporal mean 1 sample left
+        self.offset_ref[-1] = self.ref_state.o
+        self.mouth_pressure[:-1] = self.mouth_pressure[1:]                      # shift data in the temporal mean 1 sample left
+        self.mouth_pressure[-1] = self.preasure_sensor.values['pressure']
+        #self.volume_flow[:-1] = self.volume_flow[1:]                      # shift data in the temporal mean 1 sample left
+        #self.volume_flow[-1] = self.flowController.values['vol_flow']
         self.mass_flow[:-1] = self.mass_flow[1:]                      # shift data in the temporal mean 1 sample left
-        self.mass_flow[-1] = self.flowController.values['mass_flow']
+        self.mass_flow[-1] = self.flow_controller.values['mass_flow']
         self.temperature[:-1] = self.temperature[1:]                      # shift data in the temporal mean 1 sample left
-        self.temperature[-1] = self.flowController.values['temperature']
+        self.temperature[-1] = self.flow_controller.values['temperature']
         self.frequency[:-1] = self.frequency[1:]                      # shift data in the temporal mean 1 sample left
         self.frequency[-1] = self.microphone.pitch
         self.times[:-1] = self.times[1:]                      # shift data in the temporal mean 1 sample left
         self.times[-1] = time() - self.t0
         if self.saving:
-            new_data = pd.DataFrame([[self.times[-1], self.frequency[-1], self.temperature[-1], self.mass_flow[-1], self.volume_flow[-1], self.mouth_pressure[-1], self.offset[-1], self.theta[-1], self.radius[-1], self.alpha[-1], self.z[-1], self.x[-1], self.alpha_ref[-1], self.z_ref[-1], self.x_ref[-1], self.alpha_ref[-1]]], columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
+            if self.first_entry:
+                self.t1 = self.times[-1]
+                self.first_entry = False
+            new_data = pd.DataFrame([[self.times[-1] - self.t1, self.frequency[-1], self.temperature[-1], self.mass_flow[-1], self.volume_flow[-1], self.mouth_pressure[-1], self.offset[-1], self.theta[-1], self.radius[-1], self.offset_ref[-1], self.theta_ref[-1], self.radius_ref[-1], self.alpha[-1], self.z[-1], self.x[-1], self.alpha_ref[-1], self.z_ref[-1], self.x_ref[-1], self.alpha_ref[-1]]], columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'offset_ref', 'theta_ref', 'radius_ref', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
             self.data = pd.concat([self.data, new_data], ignore_index=True)
     
     def start_saving(self):
+        self.first_entry = True
         self.data = pd.DataFrame(columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
         self.saving = True
     
@@ -576,13 +625,107 @@ class Recorder:
     def finish_saving(self, file_name):
         self.saving = False
         self.data.to_csv(file_name)
+# class Recorder:
+#     """
+#     Esta clase se encarga de almacenar la historia de las variables medidas. windowWidth dice la cantidad de datos a almacenar e interval el tiempo (en milisegundos) para obtener una muestra.
+#     """
+#     def __init__(self, flowController, pressureSensor, microphone, position, motors_controller, windowWidth=200, interval=10):
+#         self.saving = False
+#         self.flowController = flowController
+#         self.pressureSensor = pressureSensor
+#         self.microphone = microphone
+#         self.position = position
+#         self.motors_controller = motors_controller
+#         self.windowWidth = windowWidth
+#         self.flow_ref = linspace(0,0,self.windowWidth)
+#         self.x_ref = linspace(0,0,self.windowWidth)
+#         self.z_ref = linspace(0,0,self.windowWidth)
+#         self.alpha_ref = linspace(0,0,self.windowWidth)
+#         self.x = linspace(0,0,self.windowWidth)
+#         self.z = linspace(0,0,self.windowWidth)
+#         self.alpha = linspace(0,0,self.windowWidth)
+#         self.radius = linspace(0,0,self.windowWidth)
+#         self.theta = linspace(0,0,self.windowWidth)
+#         self.offset = linspace(0,0,self.windowWidth)
+#         self.mouth_pressure = linspace(0,0,self.windowWidth)
+#         self.volume_flow = linspace(0,0,self.windowWidth)
+#         self.mass_flow = linspace(0,0,self.windowWidth)
+#         self.temperature = linspace(0,0,self.windowWidth)
+#         self.frequency = linspace(0,0,self.windowWidth)
+#         self.times = linspace(0,0,self.windowWidth)
+#         self.t0 = time()
 
+#         self.data = pd.DataFrame(columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
+
+#         self.interval = interval
+#         self.timer = QtCore.QTimer()
+#         self.timer.timeout.connect(self.update)
+        
+#     def start(self):
+#         self.timer.start(self.interval)
+
+#     def update(self):
+#         self.flow_ref[:-1] = self.flow_ref[1:]                      # shift data in the temporal mean 1 sample left
+#         self.flow_ref[-1] = self.flowController.values['set_point']
+#         self.x_ref[:-1] = self.x_ref[1:]                      # shift data in the temporal mean 1 sample left
+#         self.x_ref[-1] = self.motors_controller.x_ref
+#         self.z_ref[:-1] = self.z_ref[1:]                      # shift data in the temporal mean 1 sample left
+#         self.z_ref[-1] = self.motors_controller.z_ref
+#         self.alpha_ref[:-1] = self.alpha_ref[1:]                      # shift data in the temporal mean 1 sample left
+#         self.alpha_ref[-1] = self.motors_controller.alpha_ref
+#         self.x[:-1] = self.x[1:]                      # shift data in the temporal mean 1 sample left
+#         self.x[-1] = self.position.x
+#         self.z[:-1] = self.z[1:]                      # shift data in the temporal mean 1 sample left
+#         self.z[-1] = self.position.z
+#         self.alpha[:-1] = self.alpha[1:]                      # shift data in the temporal mean 1 sample left
+#         self.alpha[-1] = self.position.alpha
+#         self.radius[:-1] = self.radius[1:]                      # shift data in the temporal mean 1 sample left
+#         self.radius[-1] = self.position.r
+#         self.theta[:-1] = self.theta[1:]                      # shift data in the temporal mean 1 sample left
+#         self.theta[-1] = self.position.theta
+#         self.offset[:-1] = self.offset[1:]                      # shift data in the temporal mean 1 sample left
+#         self.offset[-1] = self.position.o
+#         Pm = self.pressureSensor.values['pressure']
+#         rho = 1.29
+#         Q = self.flowController.values['vol_flow'] / 60 / 1000
+#         r1 = 0.005
+#         r2 = 0.01
+#         Pest = Pm - (1/2) * (rho * Q**2 / np.pi**2) * (1/r1**4 - 1/r2**4)
+#         self.mouth_pressure[:-1] = self.mouth_pressure[1:]                      # shift data in the temporal mean 1 sample left
+#         self.mouth_pressure[-1] = Pest
+#         self.volume_flow[:-1] = self.volume_flow[1:]                      # shift data in the temporal mean 1 sample left
+#         self.volume_flow[-1] = self.flowController.values['vol_flow']
+#         self.mass_flow[:-1] = self.mass_flow[1:]                      # shift data in the temporal mean 1 sample left
+#         self.mass_flow[-1] = self.flowController.values['mass_flow']
+#         self.temperature[:-1] = self.temperature[1:]                      # shift data in the temporal mean 1 sample left
+#         self.temperature[-1] = self.flowController.values['temperature']
+#         self.frequency[:-1] = self.frequency[1:]                      # shift data in the temporal mean 1 sample left
+#         self.frequency[-1] = self.microphone.pitch
+#         self.times[:-1] = self.times[1:]                      # shift data in the temporal mean 1 sample left
+#         self.times[-1] = time() - self.t0
+#         if self.saving:
+#             new_data = pd.DataFrame([[self.times[-1], self.frequency[-1], self.temperature[-1], self.mass_flow[-1], self.volume_flow[-1], self.mouth_pressure[-1], self.offset[-1], self.theta[-1], self.radius[-1], self.alpha[-1], self.z[-1], self.x[-1], self.alpha_ref[-1], self.z_ref[-1], self.x_ref[-1], self.alpha_ref[-1]]], columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
+#             self.data = pd.concat([self.data, new_data], ignore_index=True)
+    
+#     def start_saving(self):
+#         self.data = pd.DataFrame(columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
+#         self.saving = True
+    
+#     def pause_saving(self):
+#         self.saving = False
+
+#     def resume_saving(self):
+#         self.saving = True
+    
+#     def finish_saving(self, file_name):
+#         self.saving = False
+#         self.data.to_csv(file_name)
 
 class FlowSignalGenerator(threading.Thread):
     """
     Esta clase se encarga de asignarle una referencia al flujo, permite conseguir rampas de distintas formas entre dos valores y la posibilidad de agregar vibratos (modificable amplitud y frecuencia)
     """
-    def __init__(self, callback, running, Fi=0, Ff=0, T=0, deformation=1, vibrato_amp=0, vibrato_freq=0):
+    def __init__(self, callback, running, playing_score, Fi=0, Ff=0, T=0, deformation=1, vibrato_amp=0, vibrato_freq=0):
         threading.Thread.__init__(self) # Initialize the threading superclass
         self.callback = callback
         self.running = running
@@ -596,25 +739,27 @@ class FlowSignalGenerator(threading.Thread):
         self.refresh_time = 0.01
         self.min_value = 0
         self.max_value = 50
+        self.playing_score = playing_score
 
     def run(self):
         val = self.Fi
         t = time() - self.t0
 
         while self.running.is_set():
-            t = time() - self.t0
-            #print(t, self.T)
-            if self.T is None:
-                self.T = 0
-            if t < self.T:
-                ramp = self.Fi + (self.Ff-self.Fi) * (t / self.T) ** self.deformation
-                vibr = self.vibrato_amp * np.sin(t * 2*np.pi * self.vibrato_freq)
-                val = ramp + vibr
-            else:
-                val = self.Ff + self.vibrato_amp * np.sin(t * 2*np.pi * self.vibrato_freq)
-            val = self.saturate(val)
-            #print(val)
-            self.callback(val)
+            if not self.playing_score.is_set():
+                t = time() - self.t0
+                #print(t, self.T)
+                if self.T is None:
+                    self.T = 0
+                if t < self.T:
+                    ramp = self.Fi + (self.Ff-self.Fi) * (t / self.T) ** self.deformation
+                    vibr = self.vibrato_amp * np.sin(t * 2*np.pi * self.vibrato_freq)
+                    val = ramp + vibr
+                else:
+                    val = self.Ff + self.vibrato_amp * np.sin(t * 2*np.pi * self.vibrato_freq)
+                val = self.saturate(val)
+                #print(val)
+                self.callback(val)
             sleep(self.refresh_time)
 
         self.callback(0)
@@ -676,12 +821,12 @@ class Player(QtCore.QThread):
         self.motors_controller = MotorsController(self.motors_event, state, x_drive, z_drive, alpha_drive)
         self.motors_controller.start()
         
+        self.startEvent = threading.Event()
+
         self.flowSignalEvent = threading.Event()
         self.flowSignalEvent.set()
-        self.flow_reference_signal = FlowSignalGenerator(self.flow_controller.change_ref, self.flowSignalEvent, self.state.flow, self.state.flow, vibrato_amp=self.state.vibrato_amp, vibrato_freq=self.state.vibrato_freq, deformation=1)
+        self.flow_reference_signal = FlowSignalGenerator(self.flow_controller.change_ref, self.flowSignalEvent, self.startEvent, self.state.flow, self.state.flow, vibrato_amp=self.state.vibrato_amp, vibrato_freq=self.state.vibrato_freq, deformation=1)
         self.flow_reference_signal.start()
-        
-        self.recorder = Recorder(self.flow_controller, self.preasure_sensor, self.microphone, self.state, self.motors_controller)
 
         self.initial_position = None
         self.phrase_instructions = []
@@ -690,6 +835,21 @@ class Player(QtCore.QThread):
         self.next_state.homed()
         self.performing = threading.Event()
         self.playing = threading.Event()
+
+        
+        t0 = time()
+        self.x_reference = Reference(self.running, self.startEvent, self.x_drive, t0, move=True, delay=20)
+        self.x_reference.start()
+        self.z_reference = Reference(self.running, self.startEvent, self.z_drive, t0, move=True, delay=20)
+        self.z_reference.start()
+        self.alpha_reference = Reference(self.running, self.startEvent, self.alpha_drive, t0, acc=5000, dec=5000, proportional_coefficient=10, delay=20, move=True)
+        self.alpha_reference.start()
+        self.flow_reference = FlowReference(self.running, self.startEvent, self.flow_controller, t0, connected=True)
+        self.flow_reference.start()
+        self.fingers_reference = FingersReference(self.running, self.startEvent, self.fingers_driver, t0, connected=True)
+        self.fingers_reference.start()
+
+        self.recorder = Recorder(self.x_drive, self.z_drive, self.alpha_drive, self.flow_controller, self.preasure_sensor, self.x_reference, self.z_reference, self.alpha_reference, self.flow_reference, self.microphone)
 
     def start_saving_data(self):
         self.recorder.start_saving()
@@ -770,132 +930,132 @@ class Player(QtCore.QThread):
         """
         Cuando se tiene una lista de instrucciones (self.initial_position, self.phrase_instructions y self.finger_instructions), esta función sirve para ejecutarlas en orden
         """
-
-        #print(self.initial_position)
-        SLEEP = 0.05
-        if self.initial_position:
-            position = State(self.initial_position['r'], self.initial_position['theta'], self.initial_position['offset'], 0)
-            self.move_to_state(position)
-            paused = False
-            while abs(self.state.r - self.initial_position['r']) > 0.2 or abs(self.state.theta - self.initial_position['theta']) > 0.2 or abs(self.state.o - self.initial_position['offset']) > 0.2:
+        pass
+        # #print(self.initial_position)
+        # SLEEP = 0.05
+        # if self.initial_position:
+        #     position = State(self.initial_position['r'], self.initial_position['theta'], self.initial_position['offset'], 0)
+        #     self.move_to_state(position)
+        #     paused = False
+        #     while abs(self.state.r - self.initial_position['r']) > 0.2 or abs(self.state.theta - self.initial_position['theta']) > 0.2 or abs(self.state.o - self.initial_position['offset']) > 0.2:
                 
-                if not self.performing.is_set():
-                    self.stop()
-                    return
-                if not self.playing.is_set():
-                    if not paused:
-                        self.stop()
-                        paused = True
-                else:
-                    if paused:
-                        self.move_to_state(position)
-                        paused = False
-                sleep(SLEEP)
-            self.finished_initial_positioning.emit()
+        #         if not self.performing.is_set():
+        #             self.stop()
+        #             return
+        #         if not self.playing.is_set():
+        #             if not paused:
+        #                 self.stop()
+        #                 paused = True
+        #         else:
+        #             if paused:
+        #                 self.move_to_state(position)
+        #                 paused = False
+        #         sleep(SLEEP)
+        #     self.finished_initial_positioning.emit()
 
-            all_actions = []
-            ti = 0
-            for instruction in self.phrase_instructions:
-                all_actions.append({'ti': ti, 'type': 0, 'data': instruction})
-                ti += instruction['time']
-            ti = 0
-            for instruction in self.finger_instructions:
-                all_actions.append({'ti': ti, 'type': 1, 'data': instruction})
-                ti += instruction['time']
+        #     all_actions = []
+        #     ti = 0
+        #     for instruction in self.phrase_instructions:
+        #         all_actions.append({'ti': ti, 'type': 0, 'data': instruction})
+        #         ti += instruction['time']
+        #     ti = 0
+        #     for instruction in self.finger_instructions:
+        #         all_actions.append({'ti': ti, 'type': 1, 'data': instruction})
+        #         ti += instruction['time']
 
-            all_actions.sort(key=lambda x: x['ti'])
+        #     all_actions.sort(key=lambda x: x['ti'])
 
-            t0 = time()
-            next_t = 0
-            last_ti = 0
-            last_tf = 0
-            phrase_actions_executed = 0
-            finger_actions_executed = 0
-            paused = False
-            next_pos = None
-            while len(all_actions) > 0:
-                if not self.performing.is_set():
-                    self.stop()
-                    break
-                if not self.playing.is_set():
-                    if not paused:
-                        paused = True
-                        t_pause = time()
-                        self.stop()
-                    sleep(SLEEP)
-                else:
-                    if paused:
-                        paused = False
-                        t0 += time() - t_pause
-                        if action['type'] == 0:
-                            if next_pos:
-                                position = State(next_pos['r'], next_pos['theta'], next_pos['offset'], next_pos['flow'], vibrato_freq=next_pos['vibrato_freq'], vibrato_amp=next_pos['vibrato_amp'])
-                                self.move_to_state(position)
-                                while abs(self.state.r - position.r) > 0.2 or abs(self.state.theta - position.theta) > 0.2 or abs(self.state.o - position.o) > 0.2:
-                                    if not self.performing.is_set():
-                                        self.stop()
-                                        return
-                                    if not self.playing.is_set():
-                                        if not paused:
-                                            self.stop()
-                                            t_pause = time()
-                                            paused = True
-                                    else:
-                                        if paused:
-                                            self.move_to_state(position)
-                                            paused = False
-                                t0 = time() - next_t
-                                next_pos = None
-                    if time() - t0 >= next_t:
-                        action = all_actions.pop(0)
-                        if action['type'] == 0: # si es instrucción de la frase musical
-                            self.begin_phrase_action.emit(phrase_actions_executed)
-                            next_pos = action['data']
-                            self.execute_phrase_action(action)
-                            phrase_actions_executed += 1
-                            if action['ti'] + action['data']['time'] > last_tf:
-                                last_tf = action['ti'] + action['data']['time']
-                            last_ti = action['ti']
-                            # else:
-                            #     last_tf -= (action['data']['time'] - last_ti)
-                            if len(all_actions):
-                                next_t = all_actions[0]['ti']
-                        else: # si es instrucción de los dedos
-                            self.begin_finger_action.emit(finger_actions_executed)
-                            self.execute_fingers_action(action)
-                            finger_actions_executed += 1
-                            if action['ti'] + action['data']['time'] > last_tf:
-                                last_tf = action['ti'] + action['data']['time']
-                            last_ti = action['ti']
-                            # else:
-                            #     last_tf -= (action['data']['time'] - last_ti)
-                            if len(all_actions):
-                                next_t = all_actions[0]['ti']
-                        #print(last_tf)
-                    else:
-                        sleep(SLEEP)
-            t0 = time()
-            paused = False
-            t_pause = 0
-            while time() - t0 < last_tf - last_ti and not paused:
-                if not self.performing.is_set():
-                    self.stop()
-                    return
-                if not self.playing.is_set():
-                    if not paused:
-                        self.stop()
-                        t_pause = time()
-                        paused = True
-                    else:
-                        if paused:
-                            self.move_to_state(position)
-                            t0 += time() - t_pause
-                            paused = False
-                sleep(SLEEP)
-                #print(time() - t0, last_tf)
+        #     t0 = time()
+        #     next_t = 0
+        #     last_ti = 0
+        #     last_tf = 0
+        #     phrase_actions_executed = 0
+        #     finger_actions_executed = 0
+        #     paused = False
+        #     next_pos = None
+        #     while len(all_actions) > 0:
+        #         if not self.performing.is_set():
+        #             self.stop()
+        #             break
+        #         if not self.playing.is_set():
+        #             if not paused:
+        #                 paused = True
+        #                 t_pause = time()
+        #                 self.stop()
+        #             sleep(SLEEP)
+        #         else:
+        #             if paused:
+        #                 paused = False
+        #                 t0 += time() - t_pause
+        #                 if action['type'] == 0:
+        #                     if next_pos:
+        #                         position = State(next_pos['r'], next_pos['theta'], next_pos['offset'], next_pos['flow'], vibrato_freq=next_pos['vibrato_freq'], vibrato_amp=next_pos['vibrato_amp'])
+        #                         self.move_to_state(position)
+        #                         while abs(self.state.r - position.r) > 0.2 or abs(self.state.theta - position.theta) > 0.2 or abs(self.state.o - position.o) > 0.2:
+        #                             if not self.performing.is_set():
+        #                                 self.stop()
+        #                                 return
+        #                             if not self.playing.is_set():
+        #                                 if not paused:
+        #                                     self.stop()
+        #                                     t_pause = time()
+        #                                     paused = True
+        #                             else:
+        #                                 if paused:
+        #                                     self.move_to_state(position)
+        #                                     paused = False
+        #                         t0 = time() - next_t
+        #                         next_pos = None
+        #             if time() - t0 >= next_t:
+        #                 action = all_actions.pop(0)
+        #                 if action['type'] == 0: # si es instrucción de la frase musical
+        #                     self.begin_phrase_action.emit(phrase_actions_executed)
+        #                     next_pos = action['data']
+        #                     self.execute_phrase_action(action)
+        #                     phrase_actions_executed += 1
+        #                     if action['ti'] + action['data']['time'] > last_tf:
+        #                         last_tf = action['ti'] + action['data']['time']
+        #                     last_ti = action['ti']
+        #                     # else:
+        #                     #     last_tf -= (action['data']['time'] - last_ti)
+        #                     if len(all_actions):
+        #                         next_t = all_actions[0]['ti']
+        #                 else: # si es instrucción de los dedos
+        #                     self.begin_finger_action.emit(finger_actions_executed)
+        #                     self.execute_fingers_action(action)
+        #                     finger_actions_executed += 1
+        #                     if action['ti'] + action['data']['time'] > last_tf:
+        #                         last_tf = action['ti'] + action['data']['time']
+        #                     last_ti = action['ti']
+        #                     # else:
+        #                     #     last_tf -= (action['data']['time'] - last_ti)
+        #                     if len(all_actions):
+        #                         next_t = all_actions[0]['ti']
+        #                 #print(last_tf)
+        #             else:
+        #                 sleep(SLEEP)
+        #     t0 = time()
+        #     paused = False
+        #     t_pause = 0
+        #     while time() - t0 < last_tf - last_ti and not paused:
+        #         if not self.performing.is_set():
+        #             self.stop()
+        #             return
+        #         if not self.playing.is_set():
+        #             if not paused:
+        #                 self.stop()
+        #                 t_pause = time()
+        #                 paused = True
+        #             else:
+        #                 if paused:
+        #                     self.move_to_state(position)
+        #                     t0 += time() - t_pause
+        #                     paused = False
+        #         sleep(SLEEP)
+        #         #print(time() - t0, last_tf)
 
-        # print(self.phrase_instructions)
-        # print(self.finger_instructions)
+        # # print(self.phrase_instructions)
+        # # print(self.finger_instructions)
 
     def execute_phrase_action(self, action):
         """

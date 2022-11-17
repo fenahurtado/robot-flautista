@@ -343,6 +343,7 @@ class AMCIDriver(QtCore.QThread):
         self.desired_command_word_9 = 0
 
     def process_incoming_data(self, par, data):
+        #print(par, data)
         word0 = format(data[0], 'b').zfill(16)
         word1 = format(data[1], 'b').zfill(16)
         mode = int(word0[0], 2)
@@ -659,7 +660,6 @@ class AMCIDriver(QtCore.QThread):
 
         with self.via:
             data, = self.via.read( [(f'@4/150/3=(INT){word0},{word1},{word2},{word3},{word4},{word5},{word6},{word7},{word8},{word9}', ("INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT"))])
-        # print(data)
         
     def request_write_absolute_move(self, target_position, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=5):
         #print(target_position, programmed_speed)
@@ -773,7 +773,7 @@ class AMCIDriver(QtCore.QThread):
 
         self.request_write_return_to_command_mode()
         self.request_write_run_assembled_move(motor_current=motor_current, blend_direction=blend_direction, dwell_move=dwell_move, dwell_time=dwell_time)
-        print('Requested move', self.hostname)
+        #print('Requested move', self.hostname)
 
     def request_write_synchrostep_move(self, position, direction, speed=200, acceleration=100, deceleration=100, proportional_coefficient=1, network_delay=0):
         #print(target_position, programmed_speed)
@@ -920,9 +920,17 @@ if __name__ == "__main__":
     event = threading.Event()
     
     event.set()
-    host = '192.168.2.104'
+    host1 = '192.168.2.104'
+    host2 = '192.168.2.103'
+    host3 = '192.168.2.102'
 
-    eje_alpha = AMCIDriver(host, event)
+    eje_x = AMCIDriver(host1, event)
+    eje_x.start()
+
+    eje_z = AMCIDriver(host2, event)
+    eje_z.start()
+
+    eje_alpha = AMCIDriver(host3, event)
     eje_alpha.start()
 
     steps = [{'pos': 1000, 'speed': 500, 'acc': 50, 'dec': 50, 'jerk': 0},

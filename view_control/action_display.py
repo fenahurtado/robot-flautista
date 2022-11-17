@@ -30,6 +30,7 @@ class ActionWidget(QWidget):
 
         #self.setFixedHeight(150)
         title = QLabel(self.label)
+        title.setStyleSheet("color: white")
         title.setWordWrap(True)
         main_layout.addWidget(title, 0, 0, 1, 3)
 
@@ -44,6 +45,9 @@ class ActionWidget(QWidget):
         # mask = QtGui.QRegion(path.toFillPolygon().toPolygon())
         # self.setMask(mask)
     
+    def zoom(self, factor):
+        self.setFixedWidth(int(100*self.width*factor-6))
+
     def resizeEvent(self, event):
         radius = 10.0
         path = QtGui.QPainterPath()

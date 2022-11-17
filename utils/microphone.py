@@ -14,17 +14,17 @@ class Microphone(threading.Thread):
     def __init__(self, running):
         threading.Thread.__init__(self) # Initialize the threading superclass
         self.running = running
-        self.sr = 44100
-        self.max_num_points = int(44100*1)
+        self.sr = 22050
+        self.max_num_points = int(self.sr*1)
         self.last_mic_data = np.array([])
         self.last = []
         self.pitch = 0
-        self.flt = signal.remez(121, [0, 50, 240, 22050], [0, 1], fs=44100)
+        self.flt = signal.remez(121, [0, 50, 240, int(self.sr/2)], [0, 1], fs=self.sr)
         self.A = [1] +  [0 for i in range(77-1)]
         fo = 12800
         l  = 0.995
-        self.B2  = [1, -2*np.cos(2*np.pi*fo/44100), 1]
-        self.A2  = [1, -2*l*np.cos(2*np.pi*fo/44100), l**2]
+        self.B2  = [1, -2*np.cos(2*np.pi*fo/self.sr), 1]
+        self.A2  = [1, -2*l*np.cos(2*np.pi*fo/self.sr), l**2]
         self.saving = False
         self.data = np.array([])
 
@@ -50,7 +50,7 @@ class Microphone(threading.Thread):
     def finish_saving(self, file_name):
         self.saving = False
         print(self.data.size)
-        write(file_name, 44100, self.data)
+        write(file_name, self.sr, self.data)
         #self.data.to_csv(file_name)
 
     def run(self):

@@ -29,7 +29,7 @@ flute_dict = {#'C3':  '00000 0000',
               'B4':  '11000 0001',
               'C5':  '10000 0001',
               'C#5': '00000 0001',
-              'D5':  '00110 0001',
+              'D5':  '01110 0001',
               'D#5': '11111 1111',
               'E5':  '11100 1101',
               'F5':  '11010 1001',
@@ -123,8 +123,10 @@ class FingersDriver(QtCore.QThread):
                 if self.changeEvent.is_set():
 
                     # Ejecuta acción de dedos de bajo nivel
-                    self.serial_port.write(self.state)
-
+                    try:
+                        self.serial_port.write(self.state)
+                    except:
+                        print("Arduino disconnected.")
                     # Limpia el flag de cambio
                     self.changeEvent.clear()
 

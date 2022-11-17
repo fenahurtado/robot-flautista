@@ -90,7 +90,17 @@
        </widget>
       </item>
       <item row="4" column="1">
-       <widget class="QDoubleSpinBox" name="accelerationValueSpinBox"/>
+       <widget class="QDoubleSpinBox" name="accelerationValueSpinBox">
+        <property name="minimum">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>153.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>153.000000000000000</double>
+        </property>
+       </widget>
       </item>
       <item row="10" column="0">
        <widget class="QLabel" name="label_9">
@@ -162,7 +172,17 @@
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="QDoubleSpinBox" name="decelerationValueSpinBox"/>
+       <widget class="QDoubleSpinBox" name="decelerationValueSpinBox">
+        <property name="minimum">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>153.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>153.000000000000000</double>
+        </property>
+       </widget>
       </item>
       <item row="8" column="1">
        <widget class="QDoubleSpinBox" name="flowSpinBox">

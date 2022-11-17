@@ -2,6 +2,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from utils.cinematica import *
 from utils.driver_fingers import instrument_dicts
 
+
 class CollapsibleBox(QtWidgets.QWidget):
     def __init__(self, title="", parent=None):
         super(CollapsibleBox, self).__init__(parent)
@@ -152,6 +153,13 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
 
         self.gridLayout.addWidget(self.labelNote, 0, 8, 1, 1)
         self.gridLayout.addWidget(self.comboBoxNote, 0, 9, 1, 1)
+
+        self.moving_with_notes = False
+        self.checkBoxMoveWithNote = QtWidgets.QCheckBox("Move to note default position")
+        with open('tools/look_up_table.json') as json_file:
+            self.note_position = json.load(json_file)
+
+        self.gridLayout.addWidget(self.checkBoxMoveWithNote, 1, 8, 1, 2)
         
         # spacerItem = QtWidgets.QSpacerItem(100, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
         # self.gridLayout.addItem(spacerItem, 0, 5, 3, 1)
@@ -182,10 +190,47 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
         self.spinBoxFlowVibrato.valueChanged.connect(self.change_flow_vibrato)
         self.spinBoxFlowVibratoAmplitude.valueChanged.connect(self.change_flow_vibrato_amp)
         self.comboBoxNote.currentIndexChanged.connect(self.change_note)
+        self.checkBoxMoveWithNote.toggled.connect(self.change_move_with_notes)
+
+    def collapsible_update_note_position(self):
+        with open('tools/look_up_table.json') as json_file:
+            self.note_position = json.load(json_file)
+            
+    def change_move_with_notes(self, value):
+        self.moving_with_notes = value
+        if value:
+            self.spinBoxX.setEnabled(False)
+            self.spinBoxZ.setEnabled(False)
+            self.spinBoxAngle.setEnabled(False)
+            self.spinBoxR.setEnabled(False)
+            self.spinBoxTheta.setEnabled(False)
+            self.spinBoxOffset.setEnabled(False)
+            self.spinBoxFlow.setEnabled(False)
+            self.spinBoxFlowVibrato.setEnabled(False)
+            self.spinBoxFlowVibratoAmplitude.setEnabled(False)
+        else:
+            self.spinBoxX.setEnabled(True)
+            self.spinBoxZ.setEnabled(True)
+            self.spinBoxAngle.setEnabled(True)
+            self.spinBoxR.setEnabled(True)
+            self.spinBoxTheta.setEnabled(True)
+            self.spinBoxOffset.setEnabled(True)
+            self.spinBoxFlow.setEnabled(True)
+            self.spinBoxFlowVibrato.setEnabled(True)
+            self.spinBoxFlowVibratoAmplitude.setEnabled(True)
 
     def change_note(self, value):
         #print(self.comboBoxNote.itemText(value))
         self.parent.musician.execute_fingers_action(self.comboBoxNote.itemText(value), through_action=False)
+        if self.moving_with_notes:
+            pos = self.note_position[self.comboBoxNote.itemText(value)]
+            self.desired_state.r = pos['r']
+            self.desired_state.theta = pos['theta']
+            self.desired_state.o = pos['offset']
+            self.desired_state.flow = pos['flow']
+            self.desired_state.vibrato_amp = 0
+            self.desired_state.vibrato_freq = 0
+            self.update_values()
 
     def add_notes(self, instrument):
         self.comboBoxNote.addItems(instrument_dicts[instrument].keys())
@@ -206,13 +251,14 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
 
     def update_values(self):
         #print(self.state)
+        self.spinBoxFlow.setValue(self.desired_state.flow)
         self.spinBoxX.setValue(self.desired_state.x)
         self.spinBoxZ.setValue(self.desired_state.z)
         self.spinBoxAngle.setValue(self.desired_state.alpha)
         self.spinBoxR.setValue(self.desired_state.r)
         self.spinBoxTheta.setValue(self.desired_state.theta)
         self.spinBoxOffset.setValue(self.desired_state.o)
-        self.spinBoxFlow.setValue(self.desired_state.flow)
+        
         self.spinBoxFlowVibrato.setValue(self.desired_state.vibrato_freq)
         self.spinBoxFlowVibratoAmplitude.setValue(self.desired_state.vibrato_amp)
         #self.desired_state.change_state(self.state)

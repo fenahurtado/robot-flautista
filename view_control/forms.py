@@ -1,6 +1,8 @@
 from functools import partial
 import imp
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QLabel, QCheckBox, QHBoxLayout, QWidget, QGridLayout
+from PyQt5.QtCore import QEventLoop, Qt
+from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from utils.driver_fingers import instrument_dicts
 
 from views.move_edit_window import Ui_Dialog as MoveDialog
@@ -12,6 +14,10 @@ from views.dialog_control import Ui_Dialog as ConfigureFluteControlDialog
 from views.start_edit_window import Ui_Dialog as StartDialog
 from views.finger_window import Ui_Dialog as FingerDialog
 from views.instrument_window import Ui_Dialog as InstrumentDialog
+from views.score_speed_change import Ui_Dialog as ScoreSpeedDialog
+from views.score_param_correction import Ui_Dialog as ScoreParamCorrectionDialog
+from views.states_from_notes_form import Ui_Dialog as StatesFromNotesDialog
+from views.zoom_form import Ui_Dialog as ZoomScoreDialog
 from view_control.plot_pyqt import RouteWidget, RampWidget
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5 import QtWidgets
@@ -306,3 +312,160 @@ class InstrumentForm(QDialog, InstrumentDialog):
 
     def change_instrument(self, value):
         self.instrument = instrument_dicts[self.comboBox.itemText(value).lower()]
+
+
+class ScaleTimeForm(QDialog, ScoreSpeedDialog):
+    def __init__(self, parent=None, data=[1]):
+        super().__init__(parent) #super(Form, self).__init__(parent)
+        self.setupUi(self)
+        self.parent = parent
+        self.data = data
+
+        self.scaleSpinBox.setValue(data[0])
+        self.onlyNotesCheckBox.setChecked(data[1])
+
+        self.scaleSpinBox.valueChanged.connect(self.change_scale)
+        self.onlyNotesCheckBox.toggled.connect(self.change_only_notes)
+
+    def change_scale(self, value):
+        self.data[0] = value
+    
+    def change_only_notes(self, value):
+        self.data[1] = value
+
+
+class ParamCorrectionForm(QDialog, ScoreParamCorrectionDialog):
+    def __init__(self, parent=None, data=[0, 0, 0, 0]):
+        super().__init__(parent) #super(Form, self).__init__(parent)
+        self.setupUi(self)
+        self.parent = parent
+        self.data = data
+
+        self.RSpinBox.setValue(data[0])
+        self.ThetaSpinBox.setValue(data[1])
+        self.OffsetSpinBox.setValue(data[2])
+        self.FlowSpinBox.setValue(data[3])
+
+        self.RSpinBox.valueChanged.connect(self.change_r_correction)
+        self.ThetaSpinBox.valueChanged.connect(self.change_theta_correction)
+        self.OffsetSpinBox.valueChanged.connect(self.change_offset_correction)
+        self.FlowSpinBox.valueChanged.connect(self.change_flow_correction)
+
+    def change_r_correction(self, value):
+        self.data[0] = value
+
+    def change_theta_correction(self, value):
+        self.data[1] = value
+
+    def change_offset_correction(self, value):
+        self.data[2] = value
+
+    def change_flow_correction(self, value):
+        self.data[3] = value
+
+class NoteWidget(QWidget):
+    def __init__(self, label, width, index, parent=None):
+        super(NoteWidget, self).__init__(parent)
+        self.label = label
+        self.parent = parent
+        self.performing = False
+        self.width = width
+        self.selected = False
+        self.index = index
+        self._generateUI()
+    
+    def _generateUI(self):
+        main_layout = QGridLayout()
+        #main_layout.SetFixedSize(130)
+        self.setLayout(main_layout)
+        self.setFixedWidth(int(100*self.width-6))
+        self.blocked = False
+        #self.setFixedHeight(300)
+        
+        self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        
+        title = QLabel(self.label)
+        title.setWordWrap(True)
+        main_layout.addWidget(title, 0, 0, 1, 3)
+
+        self.setAutoFillBackground(True)
+        p = self.palette()
+        p.setColor(self.backgroundRole(), Qt.darkBlue)
+        self.setPalette(p)
+    
+    def resizeEvent(self, event):
+        radius = 10.0
+        path = QtGui.QPainterPath()
+        path.addRoundedRect(QtCore.QRectF(self.rect()), radius, radius)
+        mask = QtGui.QRegion(path.toFillPolygon().toPolygon())
+        self.setMask(mask)
+        QtGui.QMainWindow.resizeEvent(self, event)
+
+    def mousePressEvent(self, a0: QtGui.QMouseEvent) -> None:
+        if self.blocked:
+            return super().mousePressEvent(a0)
+        if self.selected:
+            self.unselect()
+        else:
+            self.select()
+        return super().mousePressEvent(a0)
+
+    def select(self):
+        p = self.palette()
+        p.setColor(self.backgroundRole(), Qt.darkGreen)
+        self.setPalette(p)
+        self.selected = True
+        self.parent.data[1][self.index]['selected'] = True
+    
+    def unselect(self):
+        p = self.palette()
+        p.setColor(self.backgroundRole(), Qt.darkBlue)
+        self.setPalette(p)
+        self.selected = False
+        self.parent.data[1][self.index]['selected'] = False
+    
+    def block(self):
+        self.blocked = True
+
+class StatesFromNotesForm(QDialog, StatesFromNotesDialog):
+    def __init__(self, parent=None, data=[0, [], 0]):
+        super().__init__(parent) #super(Form, self).__init__(parent)
+        self.setupUi(self)
+        self.parent = parent
+        self.data = data
+
+        self.accelerationSpinBox.setValue(data[0])
+        self.boxes = []
+        for i in range(len(data[1])):
+            self.boxes.append(NoteWidget(data[1][i]['note'], data[1][i]['time'], i, parent=self))
+            self.notesLayout.addWidget(self.boxes[-1])
+            if data[1][i]['selected']:
+                self.boxes[-1].select()
+
+        if len(data[1]):
+            self.boxes[0].select()
+            self.boxes[0].block()
+
+        self.minTimeSpinBox.setValue(data[2])
+
+        self.accelerationSpinBox.valueChanged.connect(self.change_acc)
+        self.minTimeSpinBox.valueChanged.connect(self.change_min_time)
+
+    def change_acc(self, value):
+        self.data[0] = value
+    
+    def change_min_time(self, value):
+        self.data[2] = value
+
+class ZoomScoreForm(QDialog, ZoomScoreDialog):
+    def __init__(self, parent=None, data=[0]):
+        super().__init__(parent) #super(Form, self).__init__(parent)
+        self.setupUi(self)
+        self.parent = parent
+        self.data = data
+
+        self.zoomSpinBox.setValue(data[0])
+        self.zoomSpinBox.valueChanged.connect(self.change_zoom_factor)
+    
+    def change_zoom_factor(self, value):
+        self.data[0] = value

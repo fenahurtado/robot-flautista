@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>753</width>
-    <height>567</height>
+    <width>803</width>
+    <height>641</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,8 +15,25 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
+    <item row="0" column="0" colspan="2">
      <widget class="PlotWidget" name="graphicsView"/>
+    </item>
+    <item row="2" column="0" colspan="2">
+     <widget class="QPushButton" name="startButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Start</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QCheckBox" name="recordDataCheckBox">
+      <property name="text">
+       <string>Record data</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -25,7 +42,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>753</width>
+     <width>803</width>
      <height>29</height>
     </rect>
    </property>
@@ -37,7 +54,7 @@
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
-     <string>Edit</string>
+     <string>Signals</string>
     </property>
     <addaction name="actionX"/>
     <addaction name="actionX_ref"/>
@@ -45,6 +62,17 @@
     <addaction name="actionZ_ref"/>
     <addaction name="actionAlpha"/>
     <addaction name="actionAlpha_ref"/>
+    <addaction name="actionRadio"/>
+    <addaction name="actionRadio_ref"/>
+    <addaction name="actionTheta"/>
+    <addaction name="actionTheta_ref"/>
+    <addaction name="actionOffset"/>
+    <addaction name="actionOffset_ref"/>
+    <addaction name="actionFlow"/>
+    <addaction name="actionFlow_ref"/>
+    <addaction name="actionAir_Temperature"/>
+    <addaction name="actionPreasure"/>
+    <addaction name="actionPitch"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -101,6 +129,99 @@
    </property>
    <property name="text">
     <string>Alpha_ref</string>
+   </property>
+  </action>
+  <action name="actionjj">
+   <property name="text">
+    <string>jj</string>
+   </property>
+  </action>
+  <action name="actionRadio">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Radio</string>
+   </property>
+  </action>
+  <action name="actionRadio_ref">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Radio_ref</string>
+   </property>
+  </action>
+  <action name="actionTheta">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Theta</string>
+   </property>
+  </action>
+  <action name="actionTheta_ref">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Theta_ref</string>
+   </property>
+  </action>
+  <action name="actionOffset">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Offset</string>
+   </property>
+  </action>
+  <action name="actionOffset_ref">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Offset_ref</string>
+   </property>
+  </action>
+  <action name="actionFlow">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Flow</string>
+   </property>
+  </action>
+  <action name="actionFlow_ref">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Flow_ref</string>
+   </property>
+  </action>
+  <action name="actionAir_Temperature">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Air Temperature</string>
+   </property>
+  </action>
+  <action name="actionPreasure">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Preasure</string>
+   </property>
+  </action>
+  <action name="actionPitch">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Pitch</string>
    </property>
   </action>
  </widget>

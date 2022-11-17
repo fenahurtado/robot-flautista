@@ -16,7 +16,7 @@ from utils.driver_amci import AMCIDriver
 #from regex import D
 from views.main_window import Ui_MainWindow
 from view_control.forms import FingersActionForm, MoveActionForm, CalibrateFluteForm, CalibrateAngleForm, \
-    ConfigureFluteControlForm, StartActionForm, InstrumentForm
+    ConfigureFluteControlForm, StartActionForm, InstrumentForm, ScaleTimeForm, ParamCorrectionForm, StatesFromNotesForm, ZoomScoreForm
 
 from view_control.collapsible_widgets import ManualMoveCollapsibleBox
 from view_control.action_display import ActionWidget
@@ -25,6 +25,8 @@ from utils.cinematica import *
 from view_control.amci_control import AMCIWidget
 
 from utils.player import *
+
+from tools.score_tools import *
 
 #from dialog_control import Ui_Dialog
 from pyqtgraph.Qt import QtGui, QtCore
@@ -44,6 +46,7 @@ from functools import partial
 from pybase64 import b64decode
 from datetime import date, datetime
 from numpy import *
+from utils.motor_control import Window as PlayingWindow
 
 
 class Window(QMainWindow, Ui_MainWindow):
@@ -120,6 +123,7 @@ class Window(QMainWindow, Ui_MainWindow):
         # Selección de instrumento
         self.instrument_dialog = None
         self.instrument = 'flute'
+        self.zoom_factor = 1
         self.select_instrument()
         self.moveBox.add_notes(self.instrument)
         
@@ -151,8 +155,11 @@ class Window(QMainWindow, Ui_MainWindow):
         self.setInitialPositionButton.clicked.connect(self.add_initial_position_action)
         #self.actionTypeComboBox.currentIndexChanged.connect(self.change_action_type)
         self.actionChangeFlutePosition.triggered.connect(self.change_flute_position)
-        self.actionAutoHomeRoutine.triggered.connect(self.autohome_routine)
-        
+        #self.actionAutoHomeRoutine.triggered.connect(self.autohome_routine)
+        self.actionAutoHome_X.triggered.connect(self.autohome_X_routine)
+        self.actionAutoHome_Z.triggered.connect(self.autohome_Z_routine)
+        self.actionAutoHome_Alpha.triggered.connect(self.autohome_Alpha_routine)
+
         self.actionMeasureRadius.triggered.connect(self.measure_radius)
         self.actionMeasureTheta.triggered.connect(self.measure_theta)
         self.actionMeasureOffset.triggered.connect(self.measure_offset)
@@ -166,11 +173,23 @@ class Window(QMainWindow, Ui_MainWindow):
         self.actionMeasureZPosition.triggered.connect(self.measure_z_position)
         self.actionMeasureAlphaPosition.triggered.connect(self.measure_alpha_position)
 
-        self.actionReconnectFlowController.triggered.connect(self.reconnect_flow_controller)
-        self.actionReconnectPreasureSensor.triggered.connect(self.reconnect_preasure_sensor)
-        self.actionReconnectXController.triggered.connect(self.reconnect_x_controller)
-        self.actionReconnectZController.triggered.connect(self.reconnect_z_controller)
-        self.actionReconnectAngleController.triggered.connect(self.reconnect_angle_controller)
+        self.actionGenerate_states_from_notesOn_same_file.triggered.connect(self.score_generate_states)
+        self.actionGenerate_states_from_notesOn_different_file.triggered.connect(self.score_generate_states_diff)
+
+        self.actionScale_timeOn_same_file.triggered.connect(self.score_scale_time)
+        self.actionScale_timeOn_different_file.triggered.connect(self.score_scale_time_diff)
+
+        self.actionAdd_correctionOn_same_file.triggered.connect(self.score_add_correction)
+        self.actionAdd_correctionOn_different_file.triggered.connect(self.score_add_correction_diff)
+
+        self.actionUpdate_default_positions.triggered.connect(self.update_default_positions)
+
+        self.actionZoomScore.triggered.connect(self.zoom_score)
+        #self.actionReconnectFlowController.triggered.connect(self.reconnect_flow_controller)
+        #self.actionReconnectPreasureSensor.triggered.connect(self.reconnect_preasure_sensor)
+        #self.actionReconnectXController.triggered.connect(self.reconnect_x_controller)
+        #self.actionReconnectZController.triggered.connect(self.reconnect_z_controller)
+        #self.actionReconnectAngleController.triggered.connect(self.reconnect_angle_controller)
 
         self.actionConfigureFlowControlLoop.triggered.connect(self.configure_flow_control_loop)
 
@@ -243,33 +262,40 @@ class Window(QMainWindow, Ui_MainWindow):
         '''
         Esta función comienza la ejecución de la partitura que haya sido ingresada desde la interfaz.
         '''
-        self.pauseButton.show()
-        self.stopButton.show()
-        self.executeButton.hide()
-        self.setInitialPositionButton.setEnabled(False)
-        self.addActionButton.setEnabled(False)
-        self.fingersActionButton.setEnabled(False)
-        #self.actionTypeComboBox.setEnabled(False)
-        for index in range(self.scoreLayout.count()):
-            self.scoreLayout.itemAt(index).widget().disable_context_menu()
-        for index in range(self.fingersScoreLayout.count()):
-            self.fingersScoreLayout.itemAt(index).widget().disable_context_menu()
-        for index in range(self.initialPositionLayout.count()):
-            self.initialPositionLayout.itemAt(index).widget().disable_context_menu()
-        self.moveBox.disableButtons()
-        self.scrollArea.horizontalScrollBar().setValue(0)
+        r = self.save()
+        if r:
+            measure = ['X','X_ref']
+            win = PlayingWindow(self.app, measure, self.musician, parent=self, independ=False)
+            win.show()
+            self.executeButton.setEnabled(False)
+            win.open_score(self.filename)
 
-        self.musician.initial_position = self.initial_position
-        self.musician.phrase_instructions = self.phrase_actions
-        self.musician.finger_instructions = self.finger_actions
+        # self.pauseButton.show()
+        # self.stopButton.show()
+        # self.executeButton.hide()
+        # self.setInitialPositionButton.setEnabled(False)
+        # self.addActionButton.setEnabled(False)
+        # self.fingersActionButton.setEnabled(False)
+        # #self.actionTypeComboBox.setEnabled(False)
+        # for index in range(self.scoreLayout.count()):
+        #     self.scoreLayout.itemAt(index).widget().disable_context_menu()
+        # for index in range(self.fingersScoreLayout.count()):
+        #     self.fingersScoreLayout.itemAt(index).widget().disable_context_menu()
+        # for index in range(self.initialPositionLayout.count()):
+        #     self.initialPositionLayout.itemAt(index).widget().disable_context_menu()
+        # self.moveBox.disableButtons()
+        # self.scrollArea.horizontalScrollBar().setValue(0)
 
-        self.musician.playing.set()
-        self.musician.performing.set()
-
-        if self.initialPositionLayout.count():
-            self.initialPositionLayout.itemAt(0).widget().paint_green()
+        # self.musician.initial_position = self.initial_position
+        # self.musician.phrase_instructions = self.phrase_actions
+        # self.musician.finger_instructions = self.finger_actions
         
-        self.musician.start_saving_data()
+        
+
+        # # if self.initialPositionLayout.count():
+        # #     self.initialPositionLayout.itemAt(0).widget().paint_green()
+        
+        # self.musician.start_saving_data()
 
     def stop(self):
         '''
@@ -423,7 +449,7 @@ class Window(QMainWindow, Ui_MainWindow):
         Se usa esta función para guardar una partitura o los cambios realizados
         '''
         if self.scoreLayout.count() == 0 and self.fingersScoreLayout.count() == 0 and self.initialPositionLayout.count() == 0:
-            return
+            return False
         if self.filename:
             # phrase_actions = []
             # for index in range(self.scoreLayout.count()):
@@ -448,17 +474,19 @@ class Window(QMainWindow, Ui_MainWindow):
                     file.write(self.filename)
         else:
             self.save_as()
+        return True
         
     def save_as(self):
         '''
         Se usa esta función para guardar la partitura actual como un archivo nuevo.
         '''
         fname, _ = QFileDialog.getSaveFileName(self, 'Open file', self.base_path,"JSON files (*.json)")
-        if fname[-5:] != '.json':
-            fname += '.json'
-        self.filename = fname
-        self.base_path = os.path.split(fname)[0]
-        self.save()
+        if fname != '':
+            if fname[-5:] != '.json':
+                fname += '.json'
+            self.filename = fname
+            self.base_path = os.path.split(fname)[0]
+            self.save()
 
     def clean_score(self):
         '''
@@ -528,7 +556,7 @@ class Window(QMainWindow, Ui_MainWindow):
                             index += 1
                         # while QApplication.hasPendingEvents():
                         #     QApplication.processEvents()
-                        self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
+                        #self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
                         self.filename = fname
                         self.changes_saved()
                     except:
@@ -684,6 +712,253 @@ class Window(QMainWindow, Ui_MainWindow):
         #self.desired_state.change_state(self.state)
         self.musician.finish_autohome()
     
+    def autohome_X_routine(self):
+        self.musician.auto_home(z=False, alpha=False)
+
+    def autohome_Z_routine(self):
+        self.musician.auto_home(x=False, alpha=False)
+
+    def autohome_Alpha_routine(self):
+        data=[0]
+        #self.alpha_driver.request_write_reset_errors()
+        self.autohomeDlg = CalibrateAngleForm(parent=self, data=data)
+        self.autohomeDlg.angleSpinBox.valueChanged.connect(self.change_motor_angle)
+        self.autohomeDlg.setWindowTitle("Choose parameters")
+        self.musician.motors_controller.home_alpha()
+        if self.autohomeDlg.exec():
+            pass
+        self.moveBox.set_values(self.state)
+
+    def score_generate_states(self, b=False, selection=[], min_time=0):
+        #print(selection)
+        if len(selection) == 0:
+            selection = [False for i in range(len(self.finger_actions))]
+            #print(selection)
+        if not self.filename:
+            msg = QMessageBox()
+            msg.setText("You will be prompted a file dialog")
+            msg.setInformativeText("You should select where to store your fascinating new score")
+            msg.setWindowTitle("Instructions")
+            msg.exec_()
+        self.save()
+        if not self.filename:
+            return
+        notes = [{'note': self.finger_actions[i]['note'], 'time': self.finger_actions[i]['time'], 'selected': selection[i]} for i in range(len(self.finger_actions))]
+        data=[70, notes, min_time]
+        #self.alpha_driver.request_write_reset_errors()
+        dlg = StatesFromNotesForm(parent=self, data=data)
+        dlg.setWindowTitle("Choose configuration")
+        if dlg.exec():
+            acc = data[0]
+            selection = [i['selected'] for i in data[1]]
+            min_time = data[2]
+            #print(selection)
+            try:
+                generate_states_from_notes(self.filename, self.filename, acc=acc, selection=selection, min_time_change=min_time)
+                self.clean_score()
+                self.open(fname=self.filename)
+            except:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setText("Couldn't execute action")
+                msg.setInformativeText("There was an error, try different acceleration or note selection.")
+                msg.setWindowTitle("Action Error")
+                retval = msg.exec_()
+                self.score_generate_states(selection=selection, min_time=min_time)
+            
+
+    def score_generate_states_diff(self, fname=False, selection=[], min_time=0):
+        if not self.filename:
+            msg = QMessageBox()
+            msg.setText("You will be prompted two different file dialogs")
+            msg.setInformativeText("In the first one, you should select where to store your current work. In the second one, where you would like to store the new one.")
+            msg.setWindowTitle("Instructions")
+            msg.exec_()
+        else:
+            msg = QMessageBox()
+            msg.setText("You will be prompted a file dialog")
+            msg.setInformativeText("You should select where to store your new work")
+            msg.setWindowTitle("Instructions")
+            msg.exec_()
+        self.save()
+        if not self.filename:
+            return
+        if not fname:
+            fname, _ = QFileDialog.getSaveFileName(self, 'Where would you like to store the new file?', self.base_path,"JSON files (*.json)")
+        if fname:
+            if fname[-5:] != '.json':
+                fname += '.json'
+
+            if len(selection) == 0:
+                selection = [False for i in range(len(self.finger_actions))]
+
+            notes = [{'note': self.finger_actions[i]['note'], 'time': self.finger_actions[i]['time'], 'selected': selection[i]} for i in range(len(self.finger_actions))]
+
+            data=[70, notes, min_time]
+            dlg = StatesFromNotesForm(parent=self, data=data)
+            dlg.setWindowTitle("Choose configuration")
+            if dlg.exec():
+                acc = data[0]
+                selection = [i['selected'] for i in data[1]]
+                min_time = data[2]
+                #print(selection)
+                try:
+                    generate_states_from_notes(self.filename, self.filename, acc=acc, selection=selection, min_time_change=min_time)
+                    self.clean_score()
+                    self.open(fname=fname)
+                except:
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Critical)
+                    msg.setText("Couldn't execute action")
+                    msg.setInformativeText("There was an error, try different acceleration or note selection.")
+                    msg.setWindowTitle("Action Error")
+                    retval = msg.exec_()
+                    self.score_generate_states_diff(fname=fname, selection=selection, min_time=min_time)
+            
+            # generate_states_from_notes(self.filename, fname)
+            # self.clean_score()
+            # self.open(fname=fname)
+
+    def score_scale_time(self, b=0, scale=1):
+        if not self.filename:
+            msg = QMessageBox()
+            msg.setText("You will be prompted a file dialog")
+            msg.setInformativeText("You should select where to store your fascinating new score")
+            msg.setWindowTitle("Instructions")
+            msg.exec_()
+        self.save()
+        if not self.filename:
+            return
+        data=[scale, False]
+        dlg = ScaleTimeForm(parent=self, data=data)
+        dlg.setWindowTitle("Choose scale")
+        if dlg.exec():
+            scale = data[0]
+            try:
+                change_speed(self.filename, scale, self.filename, notes_only=data[1])
+                self.clean_score()
+                self.open(fname=self.filename)
+            except:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setText("Couldn't execute action")
+                msg.setInformativeText("There was an error, consider scaling only the notes.")
+                msg.setWindowTitle("Action Error")
+                retval = msg.exec_()
+                self.score_scale_time(scale=scale)
+            
+    def score_scale_time_diff(self, scale=1, fname=False):
+        if not self.filename:
+            msg = QMessageBox()
+            msg.setText("You will be prompted two different file dialogs")
+            msg.setInformativeText("In the first one, you should select where to store your current work. In the second one, where you would like to store the new one.")
+            msg.setWindowTitle("Instructions")
+            msg.exec_()
+        else:
+            msg = QMessageBox()
+            msg.setText("You will be prompted a file dialog")
+            msg.setInformativeText("You should select where to store your new work")
+            msg.setWindowTitle("Instructions")
+            msg.exec_()
+        self.save()
+        if not self.filename:
+            return
+        if not fname:
+            fname, _ = QFileDialog.getSaveFileName(self, 'Where would you like to store the new file?', self.base_path,"JSON files (*.json)")
+        if fname:
+            data=[scale, False]
+            dlg = ScaleTimeForm(parent=self, data=data)
+            dlg.setWindowTitle("Choose scale")
+            if dlg.exec():
+                scale = data[0]
+                try:
+                    change_speed(self.filename, scale, fname, notes_only=data[1])
+                    self.clean_score()
+                    self.open(fname=fname)
+                except:
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Critical)
+                    msg.setText("Couldn't execute action")
+                    msg.setInformativeText("There was an error, consider scaling only the notes.")
+                    msg.setWindowTitle("Action Error")
+                    retval = msg.exec_()
+                    self.score_scale_time_diff(scale=scale, fname=fname)
+
+    def score_add_correction(self):
+        if not self.filename:
+            msg = QMessageBox()
+            msg.setText("You will be prompted a file dialog")
+            msg.setInformativeText("You should select where to store your fascinating new score")
+            msg.setWindowTitle("Instructions")
+            msg.exec_()
+        self.save()
+        if not self.filename:
+            return
+        data=[0, 0, 0, 0]
+        dlg = ParamCorrectionForm(parent=self, data=data)
+        dlg.setWindowTitle("Choose the correction to each parameter")
+        if dlg.exec():
+            r_correction = data[0]
+            theta_correction = data[1]
+            offset_correction = data[2]
+            flow_correction = data[3]
+            add_correction(self.filename, r_correction, theta_correction, offset_correction, flow_correction, self.filename)
+            self.clean_score()
+            self.open(fname=self.filename)
+
+    def score_add_correction_diff(self):
+        if not self.filename:
+            msg = QMessageBox()
+            msg.setText("You will be prompted two different file dialogs")
+            msg.setInformativeText("In the first one, you should select where to store your current work. In the second one, where you would like to store the new one.")
+            msg.setWindowTitle("Instructions")
+            msg.exec_()
+        else:
+            msg = QMessageBox()
+            msg.setText("You will be prompted a file dialog")
+            msg.setInformativeText("You should select where to store your new work")
+            msg.setWindowTitle("Instructions")
+            msg.exec_()
+        self.save()
+        if not self.filename:
+            return
+        fname, _ = QFileDialog.getSaveFileName(self, 'Where would you like to store the new file?', self.base_path,"JSON files (*.json)")
+        if fname:
+            data=[0, 0, 0, 0]
+            dlg = ParamCorrectionForm(parent=self, data=data)
+            dlg.setWindowTitle("Choose the correction to each parameter")
+            if dlg.exec():
+                r_correction = data[0]
+                theta_correction = data[1]
+                offset_correction = data[2]
+                flow_correction = data[3]
+                add_correction(self.filename, r_correction, theta_correction, offset_correction, flow_correction, fname)
+                self.clean_score()
+                self.open(fname=fname)
+
+    def zoom_score(self, *args, disp=True):
+        if disp:
+            data=[self.zoom_factor]
+            dlg = ZoomScoreForm(parent=self, data=data)
+            dlg.setWindowTitle("Choose the scale")
+            if dlg.exec():
+                self.zoom_factor = data[0]
+                for index in range(self.scoreLayout.count()):
+                    self.scoreLayout.itemAt(index).widget().zoom(self.zoom_factor) 
+                for index in range(self.fingersScoreLayout.count()):
+                    self.fingersScoreLayout.itemAt(index).widget().zoom(self.zoom_factor) 
+        else:
+            for index in range(self.scoreLayout.count()):
+                self.scoreLayout.itemAt(index).widget().zoom(self.zoom_factor) 
+            for index in range(self.fingersScoreLayout.count()):
+                self.fingersScoreLayout.itemAt(index).widget().zoom(self.zoom_factor) 
+        #print(args, disp)
+        #print(f'Zoom a factor of {self.zoom_factor}')
+
+    def update_default_positions(self):
+        update_note_position()
+        self.moveBox.collapsible_update_note_position()
+
     def change_motor_angle(self, value):
         '''
         Esta función se usa para el homing del eje alpha, conecta los valores que se introducen en el spinbox con el driver del motor.
@@ -745,7 +1020,7 @@ class Window(QMainWindow, Ui_MainWindow):
             self.initial_position = data
             # while QApplication.hasPendingEvents():
             #     QApplication.processEvents()
-            self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
+            #self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
             self.fingersActionButton.show()
             self.addActionButton.show()
             self.setInitialPositionButton.hide()
@@ -776,9 +1051,9 @@ class Window(QMainWindow, Ui_MainWindow):
             self.finger_actions.insert(pos, data)
             # while QApplication.hasPendingEvents():
             #     QApplication.processEvents()
-            self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
+            #self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
             self.changes_to_save()
-
+        self.zoom_score(disp=False)
         return rsp
 
     def add_action(self, a=0, pos=-1, data=None, dialog=True):
@@ -789,8 +1064,8 @@ class Window(QMainWindow, Ui_MainWindow):
             pos = self.actionsCount
         if not data:
             r, theta, o, f, v_a, v_f = self.get_previous_pos(pos)
-            data = {'type': 1, 'move': 0, 'time': 1.0, 'r': r, 'theta': theta, 'offset': o, 'acceleration': 0,
-                    'deceleration': 0, 'jerk': 0, 'flow': f, 'deformation': 1, 'vibrato_amp': v_a, 'vibrato_freq': v_f}
+            data = {'type': 1, 'move': 0, 'time': 1.0, 'r': r, 'theta': theta, 'offset': o, 'acceleration': 153,
+                    'deceleration': 153, 'jerk': 0, 'flow': f, 'deformation': 1, 'vibrato_amp': v_a, 'vibrato_freq': v_f}
         if dialog:
             dlg = MoveActionForm(parent=self, data=data, index=pos)
             dlg.setWindowTitle("Choose parameters")
@@ -807,17 +1082,21 @@ class Window(QMainWindow, Ui_MainWindow):
                 rsp = dlg.exec()
                 if not rsp:
                     break
-
-            newAction = ActionWidget(data, 'Changing State', width=data['time'], parent=self, context=self.scoreLayout,
+            
+            if data['move']:
+                label = f'Move to...\n R: {data["r"]} \n Theta: {data["theta"]} \n Offset: {data["offset"]} \n Flow: {data["flow"]}'
+            else:
+                label = 'Stay'
+            newAction = ActionWidget(data, label, width=data['time'], parent=self, context=self.scoreLayout,
                                      index=pos)
             self.actionsCount += 1
             self.scoreLayout.insertWidget(pos, newAction)
             self.phrase_actions.insert(pos, data)
             # while QApplication.hasPendingEvents():
             #     QApplication.processEvents()
-            self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
+            #self.scrollArea.horizontalScrollBar().setValue(self.scrollArea.horizontalScrollBar().maximum())
             self.changes_to_save()
-
+        self.zoom_score(disp=False)
         return rsp
         
     def get_previous_note(self, pos):

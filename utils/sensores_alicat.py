@@ -107,9 +107,14 @@ class FlowController(QtCore.QThread):
             else:
                 if self.ref_comunication[0]:
                     #print('Sending: {}'.format(self.ref_comunication[1]/1))
-                    with self.via:
-                        data, = self.via.read( [('@4/100/3={}'.format(self.ref_comunication[1]/1),"REAL")] )
-                    self.ref_comunication[0] = False
+                    
+                    try:
+                        with self.via:
+                            data, = self.via.read( [('@4/100/3={}'.format(self.ref_comunication[1]/1),"REAL")] )
+                        self.ref_comunication[0] = False
+                    except:
+                        print("Alicat disconnected")
+
                 if self.controlled_var[0]:
                     self.assembly102(11,self.controlled_var[1])
                     self.controlled_var[0] = False
@@ -166,7 +171,7 @@ class PreasureSensor(threading.Thread):
             self.poller.start()
         while self.running.is_set(): # Continue grabbing data from sensor while Flag is set
             if not self.connected:
-                sleep(0.01)  # Time to sleep in seconds, emulating some sensor process taking time
+                sleep(0.05)  # Time to sleep in seconds, emulating some sensor process taking time
                 gas_1 = 0
                 state_1 = 0
                 press_sf = random.random()*PreasureSensor.SCALE

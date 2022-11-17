@@ -1,0 +1,33 @@
+{
+    "fingers": [
+        {
+            "note": "C4",
+            "time": 5.0,
+            "type": 2
+        }
+    ],
+    "init_pos": {
+        "offset": 87.0,
+        "r": 97.52,
+        "theta": 45.0,
+        "type": 0
+    },
+    "phrase": [
+        {
+            "acceleration": 153,
+            "deceleration": 153,
+            "deformation": 1,
+            "flow": 0,
+            "jerk": 0,
+            "move": 0,
+            "offset": 87.0,
+            "r": 97.52,
+            "theta": 45.0,
+            "time": 5.0,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        }
+    ],
+    "timestamp": "02/11/2022 12:41:29"
+}

@@ -1,0 +1,52 @@
+{
+    "fingers": [
+        {
+            "note": "C4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "D4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "D4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "E4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "F4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "G4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "A4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "C5",
+            "time": 1.0,
+            "type": 2
+        }
+    ],
+    "init_pos": {
+        "offset": 89.0,
+        "r": 92.26,
+        "theta": 45.0,
+        "type": 0
+    },
+    "phrase": [],
+    "timestamp": "17/10/2022 16:19:58"
+}

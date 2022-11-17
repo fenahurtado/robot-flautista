@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1092</width>
-    <height>503</height>
+    <height>664</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -90,7 +90,7 @@
          <x>0</x>
          <y>0</y>
          <width>1076</width>
-         <height>392</height>
+         <height>553</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
@@ -177,20 +177,18 @@
     <property name="title">
      <string>Settings</string>
     </property>
-    <widget class="QMenu" name="menuReconnect">
+    <widget class="QMenu" name="menuAutoHome_Routine">
      <property name="title">
-      <string>Reconnect...</string>
+      <string>AutoHome Routine</string>
      </property>
-     <addaction name="actionReconnectFlowController"/>
-     <addaction name="actionReconnectPreasureSensor"/>
-     <addaction name="actionReconnectXController"/>
-     <addaction name="actionReconnectZController"/>
-     <addaction name="actionReconnectAngleController"/>
+     <addaction name="actionAutoHome_X"/>
+     <addaction name="actionAutoHome_Z"/>
+     <addaction name="actionAutoHome_Alpha"/>
     </widget>
     <addaction name="actionChangeFlutePosition"/>
-    <addaction name="menuReconnect"/>
-    <addaction name="actionAutoHomeRoutine"/>
+    <addaction name="menuAutoHome_Routine"/>
     <addaction name="actionConfigureFlowControlLoop"/>
+    <addaction name="actionZoomScore"/>
    </widget>
    <widget class="QMenu" name="menuDrivers">
     <property name="title">
@@ -200,10 +198,41 @@
     <addaction name="actionZAxisTool"/>
     <addaction name="actionAlphaAxisTool"/>
    </widget>
+   <widget class="QMenu" name="menuScore_Tools">
+    <property name="title">
+     <string>Score Tools</string>
+    </property>
+    <widget class="QMenu" name="menuGenerate_states_from_notes">
+     <property name="title">
+      <string>Generate states from notes</string>
+     </property>
+     <addaction name="actionGenerate_states_from_notesOn_same_file"/>
+     <addaction name="actionGenerate_states_from_notesOn_different_file"/>
+    </widget>
+    <widget class="QMenu" name="menuAdd_correction">
+     <property name="title">
+      <string>Add correction</string>
+     </property>
+     <addaction name="actionAdd_correctionOn_same_file"/>
+     <addaction name="actionAdd_correctionOn_different_file"/>
+    </widget>
+    <widget class="QMenu" name="menuScale_time">
+     <property name="title">
+      <string>Scale time</string>
+     </property>
+     <addaction name="actionScale_timeOn_same_file"/>
+     <addaction name="actionScale_timeOn_different_file"/>
+    </widget>
+    <addaction name="menuGenerate_states_from_notes"/>
+    <addaction name="menuAdd_correction"/>
+    <addaction name="menuScale_time"/>
+    <addaction name="actionUpdate_default_positions"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
    <addaction name="menuConfiguration"/>
    <addaction name="menuDrivers"/>
+   <addaction name="menuScore_Tools"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionOpen">
@@ -316,11 +345,6 @@
     <string>Angle Controller</string>
    </property>
   </action>
-  <action name="actionAutoHomeRoutine">
-   <property name="text">
-    <string>AutoHome Routine</string>
-   </property>
-  </action>
   <action name="actionConfigureFlowControlLoop">
    <property name="text">
     <string>Configure Flow Control Loop</string>
@@ -354,6 +378,61 @@
   <action name="actionMeasureAlphaPosition">
    <property name="text">
     <string>Alpha Position</string>
+   </property>
+  </action>
+  <action name="actionAutoHome_X">
+   <property name="text">
+    <string>AutoHome X</string>
+   </property>
+  </action>
+  <action name="actionAutoHome_Z">
+   <property name="text">
+    <string>AutoHome Z</string>
+   </property>
+  </action>
+  <action name="actionAutoHome_Alpha">
+   <property name="text">
+    <string>AutoHome Alpha</string>
+   </property>
+  </action>
+  <action name="actionGenerate_states_from_notesOn_same_file">
+   <property name="text">
+    <string>On same file</string>
+   </property>
+  </action>
+  <action name="actionGenerate_states_from_notesOn_different_file">
+   <property name="text">
+    <string>On different file</string>
+   </property>
+  </action>
+  <action name="actionAdd_correctionOn_same_file">
+   <property name="text">
+    <string>On same file</string>
+   </property>
+  </action>
+  <action name="actionAdd_correctionOn_different_file">
+   <property name="text">
+    <string>On different file</string>
+   </property>
+  </action>
+  <action name="actionScale_timeOn_same_file">
+   <property name="text">
+    <string>On same file</string>
+   </property>
+  </action>
+  <action name="actionScale_timeOn_different_file">
+   <property name="text">
+    <string>On different file</string>
+   </property>
+  </action>
+  <action name="actionUpdate_default_positions">
+   <property name="text">
+    <string>Update default positions table</string>
+   </property>
+  </action>
+  <action name="actionZoomScore">
+   <property name="text">
+    <string>Zoom score</string>
    </property>
   </action>
  </widget>
