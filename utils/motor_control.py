@@ -616,19 +616,27 @@ class Reference(QtCore.QThread):
         self.move = move
         self.positions = []
         self.velocities = []
+        self.Kd = -0.0005
+        self.e = 0
+        self.old_e = 0
+        self.last_ref = 0
 
     def run(self):
         while self.runEvent.is_set():
             self.startEvent.wait(timeout=1)
             while self.startEvent.is_set(): 
                 t = time() - self.t0
+                self.e = self.driver.motor_position - self.ref
+                de = (self.e - self.old_e) / 0.05
                 if t - self.positions[-1][0] > 1:
                     self.finish_score_signal.emit()
                     break
                 self.ref = get_value_from_func(t, self.positions)
                 self.vel = get_value_from_func(t, self.velocities)
+                self.vel += self.Kd*de
                 self.driver.request_write_synchrostep_move(int(self.ref), 0, speed=int(self.vel), acceleration=self.acc, deceleration=self.dec, proportional_coefficient=self.proportional_coefficient, network_delay=self.delay)
                 sleep(0.05)
+                self.old_e = self.e
             sleep(0.1)
             
             # if self.startEvent.is_set():

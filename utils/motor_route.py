@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from utils.cinematica import *
 import json
 
-def get_route_positions(xi, zi, alphai, xf, zf, alphaf, divisions=20, plot=False):
+def get_route_positions(xi, zi, alphai, xf, zf, alphaf, divisions=20, plot=False, aprox=True):
     ri, thetai, oi = get_r_theta_o(xi, zi, alphai)
     rf, thetaf, of = get_r_theta_o(xf, zf, alphaf)
 
@@ -69,31 +69,40 @@ def plan_temps_according_to_speed(distances, vel, t_acc, t_dec, acc, dec):
             temps.append(t)
     return temps
 
-def x_mm_to_units(mm):
-    return int(mm * 1000 / 8 )
+def x_mm_to_units(mm, aprox=True):
+    if aprox:
+        return int(mm * 1000 / 8 )
+    else:
+        return mm * 1000 / 8
 
 def x_units_to_mm(units):
     return units * 8 / 1000
     
-def z_mm_to_units(mm):
-    return int(mm * 1000 / 8 )
+def z_mm_to_units(mm, aprox=True):
+    if aprox:
+        return int(mm * 1000 / 8 )
+    else:
+        return mm * 1000 / 8
 
 def z_units_to_mm(units):
     return units * 8 / 1000
     
-def alpha_angle_to_units(angle):
-    return int(angle * 10000 / 360)
+def alpha_angle_to_units(angle, aprox=True):
+    if aprox:
+        return int(angle * 10000 / 360)
+    else:
+        return angle * 10000 / 360
 
 def alpha_units_to_angle(units):
     return units * 360 / 10000
     
-def plan_route(x_points, z_points, alpha_points, temps):
+def plan_route(x_points, z_points, alpha_points, temps, aprox=True):
     points = {'x': [], 'z': [], 'alpha': [], 't': []}
 
     for i in range(len(x_points) - 1):
-        x = x_mm_to_units(x_points[i])            
-        z = z_mm_to_units(z_points[i])
-        alpha = alpha_angle_to_units(alpha_points[i])
+        x = x_mm_to_units(x_points[i], aprox=aprox)            
+        z = z_mm_to_units(z_points[i], aprox=aprox)
+        alpha = alpha_angle_to_units(alpha_points[i], aprox=aprox)
         t = temps[i]
 
         points['x'].append(x)
@@ -103,7 +112,7 @@ def plan_route(x_points, z_points, alpha_points, temps):
 
     return points
         
-def get_route_a_b(initial_state, final_state, acc=20, dec=20, T=None, divisions=12):
+def get_route_a_b(initial_state, final_state, acc=20, dec=20, T=None, divisions=12, aprox=True):
     x_points, z_points, alpha_points, d = get_route_positions(*initial_state.cart_coords(), *final_state.cart_coords(), divisions=divisions, plot=False)
     if not T:
         T = 0.1
@@ -118,14 +127,14 @@ def get_route_a_b(initial_state, final_state, acc=20, dec=20, T=None, divisions=
             return None
     vel, t_acc, t_dec = plan_speed_curve(d[-1], acc, dec, T)
     temps = plan_temps_according_to_speed(d, vel, t_acc, t_dec, acc, dec)
-    route = plan_route(x_points, z_points, alpha_points, temps)
-    route['x'].append(x_mm_to_units(final_state.x))
-    route['z'].append(z_mm_to_units(final_state.z))
-    route['alpha'].append(alpha_angle_to_units(final_state.alpha))
+    route = plan_route(x_points, z_points, alpha_points, temps, aprox=aprox)
+    route['x'].append(x_mm_to_units(final_state.x, aprox=aprox))
+    route['z'].append(z_mm_to_units(final_state.z, aprox=aprox))
+    route['alpha'].append(alpha_angle_to_units(final_state.alpha, aprox=aprox))
     route['t'].append(T)
     return route
 
-def get_route_complete(path):
+def get_route_complete(path, go_back=True):
     with open(path) as file:
         data = json.load(file)
     
@@ -145,7 +154,8 @@ def get_route_complete(path):
             alpha = alpha_units_to_angle(route['alpha'][-1])
             a = State(*get_r_theta_o(x, z, alpha), 0)
             b = State(act['r'], act['theta'], act['offset'], act['flow'])
-            route_add = get_route_a_b(a, b, acc=act['acceleration'], dec=act['deceleration'], T=act['time'], divisions=int(act['time']*100))
+            route_add = get_route_a_b(a, b, acc=act['acceleration'], dec=act['deceleration'], T=act['time'], divisions=int(act['time']*100), aprox=False)
+            #print(route_add['x'])
 
             Fi = route['flow'][-1]
             Ff = act['flow']
@@ -190,7 +200,7 @@ def get_route_complete(path):
     alpha = alpha_units_to_angle(route['alpha'][-1])
     a = State(*get_r_theta_o(x, z, alpha), 0)
     b = State(initial_state.r, initial_state.theta, initial_state.o, 0)
-    route_add = get_route_a_b(a, b, acc=99, dec=99, T=2, divisions=int(2*100))
+    route_add = get_route_a_b(a, b, acc=99, dec=99, T=2, divisions=int(2*100), aprox=False)
 
     Fi = route['flow'][-1]
     Ff = 0
@@ -209,10 +219,11 @@ def get_route_complete(path):
         route['flow'].append(flow_sat)
         t += 0.01
 
-    route['x'] += route_add['x']
-    route['z'] += route_add['z']
-    route['alpha'] += route_add['alpha']
-    route['t'] += route_add['t']        
+    if go_back:
+        route['x'] += route_add['x']
+        route['z'] += route_add['z']
+        route['alpha'] += route_add['alpha']
+        route['t'] += route_add['t']        
     
     
     route['x_vel'] = []
@@ -220,12 +231,27 @@ def get_route_complete(path):
     route['alpha_vel'] = []
     
     for i in range(len(route['t']) - 1):
-        route['x_vel'].append(int((route['x'][i + 1] - route['x'][i]) / route['t'][i + 1] - route['t'][i]))
-        route['z_vel'].append(int((route['z'][i + 1] - route['z'][i]) / route['t'][i + 1] - route['t'][i]))
-        route['alpha_vel'].append(int((route['alpha'][i + 1] - route['alpha'][i]) / route['t'][i + 1] - route['t'][i]))
+        dT = (route['t'][i + 1] - route['t'][i])
+        if dT == 0:
+            route['x_vel'].append(0)
+            route['z_vel'].append(0)
+            route['alpha_vel'].append(0)
+        else:
+            route['x_vel'].append(int((route['x'][i + 1] - route['x'][i]) / dT))
+            #print(dT, route['x_vel'][-1], route['x'][i + 1] - route['x'][i], route['x'][i])
+            route['z_vel'].append(int((route['z'][i + 1] - route['z'][i]) / dT))
+            route['alpha_vel'].append(int((route['alpha'][i + 1] - route['alpha'][i]) / dT))
     route['x_vel'].append(0)
     route['z_vel'].append(0)
     route['alpha_vel'].append(0)
+
+    route['x'] = list(map(lambda x: round(x), route['x']))
+    route['z'] = list(map(lambda x: round(x), route['z']))
+    route['alpha'] = list(map(lambda x: round(x), route['alpha']))
+
+    route['x_vel'] = list(map(lambda x: round(x), route['x_vel']))
+    route['z_vel'] = list(map(lambda x: round(x), route['z_vel']))
+    route['alpha_vel'] = list(map(lambda x: round(x), route['alpha_vel']))
 
     t = 0
     route['notes'] = []

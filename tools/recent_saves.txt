@@ -1,3 +1,8 @@
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_09.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_09.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_09.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_09.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_09.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/bud_bunny.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/bud_bunny.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/bud_bunny_2.json

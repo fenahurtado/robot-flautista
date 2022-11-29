@@ -3,7 +3,7 @@
     "D#3": {"r":  8.3, "theta": 43.5, "offset":  0.5, "flow": 16.3},
     "E3":  {"r":  8.0, "theta": 44.0, "offset":  0.5, "flow": 16.5},
     "F3":  {"r":  7.8, "theta": 43.0, "offset":  0.5, "flow": 16.8},
-    "F#3": {"r":  7.5, "theta": 44.5, "offset": -0.5, "flow": 17.0},
+    "F#3": {"r":  7.5, "theta": 44.5, "offset":  0.5, "flow": 17.0},
     "G3":  {"r":  7.5, "theta": 44.5, "offset":  0.0, "flow": 17.0},
     "G#3": {"r":  7.2, "theta": 44.8, "offset":  0.2, "flow": 18.0},
     "A3":  {"r":  7.0, "theta": 45.0, "offset":  0.0, "flow": 18.5},

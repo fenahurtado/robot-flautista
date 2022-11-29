@@ -14,7 +14,7 @@ from views.plot_window import Ui_MainWindow as PlotWindow
 
 signals = ['Radius', 'Incidence Angle', 'Jet Offset', 'Position', 'Mouth Pressure', 'Mass Flow Rate', 'Volume Flow Rate', 'Air Temperature', 'Sound Frequency', 'X Position', 'Z Position', 'Alpha Position']
 
-class Window(QMainWindow, PlotWindow):
+class Window(QMainWindow, PlotWindow, QtCore.QThread):
     def __init__(self, app, measure, data, interval=10, parent=None):
         super().__init__(parent)
         self.setupUi(self)

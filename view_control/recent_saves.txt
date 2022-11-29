@@ -1,3 +1,29 @@
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/bumblebee_rapido_2.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/bumblebee_rapido_2.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/bumblebee_rapido_2.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/Etude Mecanique/test_01.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/oboe_gabriel.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/bumblebee_rapido_2.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/oboe_gabriel.json

@@ -9,7 +9,7 @@ from utils.player import Player, State
 from utils.sensores_alicat import FlowController, PreasureSensor
 from view_control.main_window import Window
 
-connected = True
+connected = False
 
 preasure_sensor_event = threading.Event()
 preasure_sensor_event.set()
@@ -47,10 +47,11 @@ microphone.start()
 fingers_event = threading.Event()
 fingers_event.set()
 ## TEFO: '/dev/cu.usbserial-142420'
-try:
-    fingers_driver = FingersDriver('/dev/ttyUSB0', fingers_event, connected=connected)
-except:
-    fingers_driver = FingersDriver('/dev/ttyUSB1', fingers_event, connected=connected)
+fingers_driver = FingersDriver('/dev/ttyUSB0', fingers_event, connected=connected)
+# try:
+#     fingers_driver = FingersDriver('/dev/ttyUSB0', fingers_event, connected=connected)
+# except:
+#     fingers_driver = FingersDriver('/dev/ttyUSB1', fingers_event, connected=connected)
 fingers_driver.start()
 
 state = State(0, 0, 0, 0)
