@@ -1,0 +1,63 @@
+{
+    "fingers": [
+        {
+            "note": "G3",
+            "time": 120.1,
+            "type": 2
+        }
+    ],
+    "init_pos": {
+        "offset": -1.0,
+        "r": 7.5,
+        "theta": 44.5,
+        "type": 0
+    },
+    "phrase": [
+        {
+            "acceleration": 153,
+            "deceleration": 153,
+            "deformation": 0.0,
+            "flow": 5.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": -1.0,
+            "r": 7.5,
+            "theta": 44.5,
+            "time": 0.1,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 153,
+            "deceleration": 153,
+            "deformation": 1,
+            "flow": 40.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": -1.0,
+            "r": 7.5,
+            "theta": 44.5,
+            "time": 60.0,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 153,
+            "deceleration": 153,
+            "deformation": 1,
+            "flow": 0.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": -1.0,
+            "r": 7.5,
+            "theta": 44.5,
+            "time": 60.0,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        }
+    ],
+    "timestamp": "30/01/2023 16:36:49"
+}

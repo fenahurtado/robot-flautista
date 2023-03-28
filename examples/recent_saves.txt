@@ -1,3 +1,17 @@
+/home/fernando/Dropbox/UC/Magister/robot-flautista/exercises/test_flow.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_01.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_D_mayor_nueva.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_D_mayor_nueva.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_D_mayor_nueva.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_D_mayor_nueva.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_D_mayor_nueva.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_D_mayor_nueva.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/partitura_simple.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/partitura_simple.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/partitura_simple.json
+/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/partitura_simple.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/bumblebee_rapido_2.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/bumblebee_rapido_2.json
 /home/fernando/Dropbox/UC/Magister/robot-flautista/examples/example_09.json

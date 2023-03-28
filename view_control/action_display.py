@@ -54,7 +54,7 @@ class ActionWidget(QWidget):
         path.addRoundedRect(QtCore.QRectF(self.rect()), radius, radius)
         mask = QtGui.QRegion(path.toFillPolygon().toPolygon())
         self.setMask(mask)
-        QtGui.QMainWindow.resizeEvent(self, event)
+        QtWidgets.QMainWindow.resizeEvent(self, event)
 
     def contextMenuEvent(self, event):
         if not self.performing:

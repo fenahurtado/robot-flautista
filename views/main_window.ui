@@ -28,6 +28,27 @@
       </property>
      </spacer>
     </item>
+    <item row="1" column="5">
+     <widget class="QPushButton" name="stopButton">
+      <property name="text">
+       <string>Stop</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="3">
+     <widget class="QPushButton" name="setInitialPositionButton">
+      <property name="text">
+       <string>Set Initial Position</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="2">
+     <widget class="QPushButton" name="fingersActionButton">
+      <property name="text">
+       <string>Fingers Action</string>
+      </property>
+     </widget>
+    </item>
     <item row="1" column="1">
      <widget class="QPushButton" name="addActionButton">
       <property name="text">
@@ -39,34 +60,6 @@
      <widget class="QPushButton" name="executeButton">
       <property name="text">
        <string>Execute Score</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="6">
-     <widget class="QPushButton" name="stopButton">
-      <property name="text">
-       <string>Stop</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="2">
-     <widget class="QPushButton" name="fingersActionButton">
-      <property name="text">
-       <string>Fingers Action</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="5">
-     <widget class="QPushButton" name="pauseButton">
-      <property name="text">
-       <string>Pause</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="3">
-     <widget class="QPushButton" name="setInitialPositionButton">
-      <property name="text">
-       <string>Set Initial Position</string>
       </property>
      </widget>
     </item>
@@ -126,6 +119,13 @@
         </item>
        </layout>
       </widget>
+     </widget>
+    </item>
+    <item row="1" column="6">
+     <widget class="QPushButton" name="startButton">
+      <property name="text">
+       <string>Start</string>
+      </property>
      </widget>
     </item>
    </layout>

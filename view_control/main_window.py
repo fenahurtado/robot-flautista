@@ -200,8 +200,8 @@ class Window(QMainWindow, Ui_MainWindow):
         self.fastSave.activated.connect(self.save)
         self.actionNew.triggered.connect(self.new_file)
 
-        self.pauseButton.clicked.connect(self.pause)
-        self.pauseButton.hide()
+        # self.pauseButton.clicked.connect(self.pause)
+        # self.pauseButton.hide()
         self.stopButton.clicked.connect(self.stop)
         self.stopButton.hide()
         self.executeButton.clicked.connect(self.execute_score)
@@ -239,24 +239,24 @@ class Window(QMainWindow, Ui_MainWindow):
         toolwin.setWindowTitle('Alpha Driver Tool')
         toolwin.show()
 
-    def pause(self):
-        '''
-        Mientras se está ejecutando una partitura es posible detenerla (hacer una pausa) con la posibilidad de después seguir ejecutándola desde donde se dejó.
-        '''
-        if self.musician.playing.is_set():
-            self.pauseButton.setText('Play')
-            self.musician.playing.clear()
-            self.moveBox.enableButtons()
-            # while QApplication.hasPendingEvents():
-            #     QApplication.processEvents()
-            self.moveBox.set_values(self.state)
-            self.musician.pause_saving_data()
+    # def pause(self):
+    #     '''
+    #     Mientras se está ejecutando una partitura es posible detenerla (hacer una pausa) con la posibilidad de después seguir ejecutándola desde donde se dejó.
+    #     '''
+    #     if self.musician.playing.is_set():
+    #         self.pauseButton.setText('Play')
+    #         self.musician.playing.clear()
+    #         self.moveBox.enableButtons()
+    #         # while QApplication.hasPendingEvents():
+    #         #     QApplication.processEvents()
+    #         self.moveBox.set_values(self.state)
+    #         self.musician.pause_saving_data()
 
-        else:
-            self.pauseButton.setText('Pause')
-            self.moveBox.disableButtons()
-            self.musician.playing.set()
-            self.musician.resume_saving_data()
+    #     else:
+    #         self.pauseButton.setText('Pause')
+    #         self.moveBox.disableButtons()
+    #         self.musician.playing.set()
+    #         self.musician.resume_saving_data()
     
     def execute_score(self):
         '''
@@ -304,7 +304,7 @@ class Window(QMainWindow, Ui_MainWindow):
         #print('Stop clicked')
         self.musician.performing.clear()
         self.musician.playing.clear()
-        self.pauseButton.hide()
+        # self.pauseButton.hide()
         self.stopButton.hide()
         self.executeButton.show()
         self.setInitialPositionButton.setEnabled(True)

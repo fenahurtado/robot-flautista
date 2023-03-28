@@ -96,13 +96,14 @@ instrument_dicts = {'flute': flute_dict,
 
 class FingersDriver(QtCore.QThread):
 
-    def __init__(self, host, running, connected=True, instrument='flute'):
+    def __init__(self, host, running, connected=True, instrument='flute', verbose=False):
 
         # Variables de threading
         QtCore.QThread.__init__(self)
         self.running = running
         self.connected = connected
-
+        self.verbose = verbose
+        
         # Variables de músico
         self.instrument = instrument
         self.note_dict = instrument_dicts[instrument]
@@ -146,11 +147,14 @@ class FingersDriver(QtCore.QThread):
         """
 
         # Modifica el estado de servos interno según un diccionario
-        servo = translate_fingers_to_servo(instrument_dicts[self.instrument][req_note])
-        self.state = int(servo.replace(' ', ''), 2).to_bytes(2, byteorder='big')
+        if req_note in instrument_dicts[self.instrument].keys():
+            servo = translate_fingers_to_servo(instrument_dicts[self.instrument][req_note])
+            self.state = int(servo.replace(' ', ''), 2).to_bytes(2, byteorder='big')
 
-        # Levanta el flag para generar un cambio en el Thread principal
-        self.changeEvent.set()
+            # Levanta el flag para generar un cambio en el Thread principal
+            self.changeEvent.set()
+        else:
+            print(f'Key error: {req_note} not in dict')
 
 
 def translate_fingers_to_servo(note_bits):
@@ -172,20 +176,37 @@ if __name__ == "__main__":
 
     test_finger_event = threading.Event()
     test_finger_event.set()
-    test_host = '/dev/cu.usbserial-142420'
-    test_driver = FingersDriver(test_host, test_finger_event, instrument='flute')
+    test_host = '/dev/ttyACM0'
+    test_driver = FingersDriver(test_host, test_finger_event, instrument='test')
 
     test_driver.start()
     sleep(1)
 
-    for note in flute_dict.keys():
+    while True:
+        note = input()
+        if note == 'q':
+            break
+        elif note == 'escala':
+            for note in ['C4', 'B3', 'A3', 'G3', 'F3', 'E3', 'D3', 'C4', 'B3', 'A3', 'G3', 'F3', 'E3', 'D3', 'C4', 'B3', 'A3', 'G3', 'F3', 'E3', 'D3', 'C4', 'B3', 'A3', 'G3', 'F3', 'E3', 'D3']:
+                print(f'Nota: {note}')
+                test_driver.request_finger_action(note)
+                sleep(0.1)
+                print(f"Binario: {int.from_bytes(test_driver.state, byteorder='big'):09b}\n")
+                #sleep(0.1)
+        elif note in test_dict.keys():
+            print(f'Nota: {note}')
+            test_driver.request_finger_action(note)
+            sleep(0.1)
+            print(f"Binario: {int.from_bytes(test_driver.state, byteorder='big'):09b}\n")
 
-        # DEBUGGING: Muestra detalles sobre el mensaje enviado
-        print(f'Nota: {note}')
-        test_driver.request_finger_action(note)
-        sleep(0.1)
-        print(f"Binario: {int.from_bytes(test_driver.state, byteorder='big'):09b}\n")
+    # for note in test_dict.keys():
 
-        input()
+    #     # DEBUGGING: Muestra detalles sobre el mensaje enviado
+    #     print(f'Nota: {note}')
+    #     test_driver.request_finger_action(note)
+    #     sleep(0.1)
+    #     print(f"Binario: {int.from_bytes(test_driver.state, byteorder='big'):09b}\n")
+
+    #     input()
 
 

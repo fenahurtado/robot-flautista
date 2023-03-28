@@ -838,11 +838,11 @@ class Player(QtCore.QThread):
 
         
         t0 = time()
-        self.x_reference = Reference(self.running, self.startEvent, self.x_drive, t0, move=True, delay=20)
+        self.x_reference = Reference(self.running, self.startEvent, self.x_drive, t0, acc=20, dec=20, proportional_coefficient=1, move=True, delay=20, Kd=0.01)
         self.x_reference.start()
-        self.z_reference = Reference(self.running, self.startEvent, self.z_drive, t0, move=True, delay=20)
+        self.z_reference = Reference(self.running, self.startEvent, self.z_drive, t0, acc=20, dec=20, proportional_coefficient=1, move=True, delay=20, Kd=0.01)
         self.z_reference.start()
-        self.alpha_reference = Reference(self.running, self.startEvent, self.alpha_drive, t0, acc=5000, dec=5000, proportional_coefficient=10, delay=20, move=True)
+        self.alpha_reference = Reference(self.running, self.startEvent, self.alpha_drive, t0, acc=5000, dec=5000, proportional_coefficient=1, delay=20, move=True)
         self.alpha_reference.start()
         self.flow_reference = FlowReference(self.running, self.startEvent, self.flow_controller, t0, connected=True)
         self.flow_reference.start()

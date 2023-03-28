@@ -129,10 +129,39 @@ class Window3(QMainWindow, PlotWindowView):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(self.interval)
-
+        self.plot_choise = 0
+        self.xButton.toggled.connect(self.plot_x)
+        self.zButton.toggled.connect(self.plot_z)
+        self.alphaButton.toggled.connect(self.plot_alpha)
+        self.recordCheckBox.toggled.connect(self.change_record_data)
+        self.record_data = False
         self.t0 = time()
         self.t = 0
     
+    def change_record_data(self, value):
+        self.record_data = value
+
+    def plot_x(self, value):
+        if value:
+            self.plot_choise = 0
+        else:
+            self.curves[0].setData([], [])
+            self.curves[1].setData([], [])
+
+    def plot_z(self, value):
+        if value:
+            self.plot_choise = 1
+        else:
+            self.curves[2].setData([], [])
+            self.curves[3].setData([], [])
+
+    def plot_alpha(self, value):
+        if value:
+            self.plot_choise = 2
+        else:
+            self.curves[4].setData([], [])
+            self.curves[5].setData([], [])
+
     def start_action(self):
         t = time()
         self.x_reference.t0 = t
@@ -149,12 +178,15 @@ class Window3(QMainWindow, PlotWindowView):
         
 
     def update(self):
-        self.curves[0].setData(self.data.times, self.data.x)
-        self.curves[1].setData(self.data.times, self.data.x_ref)
-        #self.curves[2].setData(self.data.times, self.data.z)
-        # self.curves[3].setData(self.data.times, self.data.z_ref)
-        # self.curves[4].setData(self.data.times, self.data.alpha)
-        # self.curves[5].setData(self.data.times, self.data.alpha_ref)
+        if self.plot_choise == 0:
+            self.curves[0].setData(self.data.times, self.data.x)
+            self.curves[1].setData(self.data.times, self.data.x_ref)
+        elif self.plot_choise == 1:
+            self.curves[2].setData(self.data.times, self.data.z)
+            self.curves[3].setData(self.data.times, self.data.z_ref)
+        elif self.plot_choise == 2:
+            self.curves[4].setData(self.data.times, self.data.alpha)
+            self.curves[5].setData(self.data.times, self.data.alpha_ref)
 
         self.app.processEvents()
 
@@ -356,10 +388,13 @@ class SimpleRecorder3:
 
     def update(self):
         self.ref_state_x = x_units_to_mm(self.x_reference.ref)
+        self.vel_state_x = self.x_reference.vel
         self.real_state_x = x_units_to_mm(self.x_driver.motor_position)
         self.ref_state_z = z_units_to_mm(self.z_reference.ref)
+        self.vel_state_z = self.z_reference.vel
         self.real_state_z = z_units_to_mm(self.z_driver.motor_position)
         self.ref_state_alpha = alpha_units_to_angle(self.alpha_reference.ref)
+        self.vel_state_alpha = self.alpha_reference.vel
         self.real_state_alpha = alpha_units_to_angle(self.alpha_driver.motor_position)
 
         self.x_ref[:-1] = self.x_ref[1:]                      # shift data in the temporal mean 1 sample left
@@ -385,7 +420,7 @@ class SimpleRecorder3:
                 self.t1 = self.times[-1]
                 self.first_entry = False
             t = self.times[-1] - self.t1
-            new_data = pd.DataFrame({'time': [t, t, t, t, t, t], 'signal':['x_ref', 'x', 'z_ref', 'z', 'alpha_ref', 'alpha'], 'value': [self.x_ref[-1], self.x[-1], self.z_ref[-1], self.z[-1], self.alpha_ref[-1], self.alpha[-1]]})
+            new_data = pd.DataFrame({'time': [t, t, t, t, t, t, t, t, t], 'signal':['x_ref', 'x', 'z_ref', 'z', 'alpha_ref', 'alpha', 'vel_ref_x', 'vel_ref_z', 'vel_ref_alpha'], 'value': [self.x_ref[-1], self.x[-1], self.z_ref[-1], self.z[-1], self.alpha_ref[-1], self.alpha[-1], self.vel_state_x, self.vel_state_z, self.vel_state_alpha]})
             self.data = self.data.append(new_data, ignore_index = True)
             
     def start_saving(self):
@@ -404,7 +439,7 @@ class SimpleRecorder3:
         self.data.to_csv(file_name)
 
 
-path = "/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/bumblebee_rapido_2.json"
+path = "/home/fernando/Dropbox/UC/Magister/robot-flautista/exercises/bumblebee_ejercicio.json"
 route = get_route_complete(path, go_back=False)
 # for i in range(len(route['x'])):
 #     route['x'][i] = x_units_to_mm(route['x'][i])
@@ -416,8 +451,8 @@ z_vel = []
 alpha = []
 alpha_vel = []
 for i in range(len(route['t'])):
-    x.append((route['t'][i], route['x'][i]))
-    x_vel.append((route['t'][i], route['x_vel'][i]))
+    x.append((route['t'][i], route['z'][i]))
+    x_vel.append((route['t'][i], route['z_vel'][i]))
     z.append((route['t'][i], route['z'][i]))
     z_vel.append((route['t'][i], route['z_vel'][i]))
     alpha.append((route['t'][i], route['alpha'][i]))
@@ -449,17 +484,17 @@ alpha_driver.start()
 start_event = threading.Event()
 t0 = time()
 
-x_reference = Reference(x_event, start_event, x_driver, t0, acc=500, dec=500, proportional_coefficient=1, delay=0, move=True)
+x_reference = Reference(x_event, start_event, x_driver, t0, acc=500, dec=500, proportional_coefficient=1, delay=20, move=True)
 x_reference.positions = x
 x_reference.velocities = x_vel
 x_reference.start()
 
-z_reference = Reference(z_event, start_event, z_driver, t0, acc=500, dec=500, proportional_coefficient=1, delay=0, move=True)
+z_reference = Reference(z_event, start_event, z_driver, t0, acc=200, dec=200, proportional_coefficient=1, delay=20, move=False)
 z_reference.positions = z
 z_reference.velocities = z_vel
 z_reference.start()
 
-alpha_reference = Reference(alpha_event, start_event, alpha_driver, t0, acc=5000, dec=5000, proportional_coefficient=1, delay=0, move=True)
+alpha_reference = Reference(alpha_event, start_event, alpha_driver, t0, acc=5000, dec=5000, proportional_coefficient=1, delay=20, move=False)
 alpha_reference.positions = alpha
 alpha_reference.velocities = alpha_vel
 alpha_reference.start()

@@ -599,7 +599,7 @@ class Window(QMainWindow, PlotWindow):
 
 class Reference(QtCore.QThread):
     finish_score_signal = QtCore.pyqtSignal()
-    def __init__(self, runEvent, startEvent, driver, t0, acc=10, dec=10, proportional_coefficient=1, delay=0, move=False):
+    def __init__(self, runEvent, startEvent, driver, t0, acc=10, dec=10, proportional_coefficient=1, delay=0, Kd=0.001, move=False):
         QtCore.QThread.__init__(self)
         self.amp = 200
         self.freq = 1
@@ -616,7 +616,7 @@ class Reference(QtCore.QThread):
         self.move = move
         self.positions = []
         self.velocities = []
-        self.Kd = -0.0005
+        self.Kd = -Kd
         self.e = 0
         self.old_e = 0
         self.last_ref = 0
@@ -633,8 +633,9 @@ class Reference(QtCore.QThread):
                     break
                 self.ref = get_value_from_func(t, self.positions)
                 self.vel = get_value_from_func(t, self.velocities)
-                self.vel += self.Kd*de
-                self.driver.request_write_synchrostep_move(int(self.ref), 0, speed=int(self.vel), acceleration=self.acc, deceleration=self.dec, proportional_coefficient=self.proportional_coefficient, network_delay=self.delay)
+                self.vel = self.vel + self.Kd*de*0
+                if self.move:
+                    self.driver.request_write_synchrostep_move(int(self.ref), 0, speed=int(self.vel), acceleration=self.acc, deceleration=self.dec, proportional_coefficient=self.proportional_coefficient, network_delay=self.delay)
                 sleep(0.05)
                 self.old_e = self.e
             sleep(0.1)

@@ -617,6 +617,8 @@ class AMCIDriver(QtCore.QThread):
         #print(f'@4/150/3=(UINT){word0},{word1},{word2},{word3},{word4},{word5},{word6},{word7},{word8},{word9}')
         with self.via:
             data, = self.via.read( [(f'@4/150/3=(INT){word0},{word1},{word2},{word3},{word4},{word5},{word6},{word7},{word8},{word9}', ("INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT"))])
+            if self.verbose:
+                print(f'@4/150/3=(INT){word0},{word1},{word2},{word3},{word4},{word5},{word6},{word7},{word8},{word9}')
 
     def request_write_set_starting_speed(self, starting_speed):
         #self.request_write_configuration(disable_anti_resonance_bit=self.disable_anti_resonance_bit, enable_stall_detection_bit=self.enable_stall_detection_bit, use_backplane_proximity_bit=self.use_backplane_proximity_bit, use_encoder_bit=self.use_encoder_bit, home_to_encoder_z_pulse=self.home_to_encoder_z_pulse, input_3_function_bits=self.input_3_function_bits, input_2_function_bits=self.input_2_function_bits, input_1_function_bits=self.input_1_function_bits, output_functionality_bit=self.output_functionality_bit, output_state_control_on_network_lost=self.output_state_control_on_network_lost, output_state_on_network_lost=self.output_state_on_network_lost, read_present_configuration=self.read_present_configuration, save_configuration=self.save_configuration, binary_input_format=self.binary_input_format, binary_output_format=self.binary_output_format, binary_endian=self.binary_endian, input_3_active_level=self.input_3_active_level, input_2_active_level=self.input_2_active_level, input_1_active_level=self.input_1_active_level, starting_speed=starting_speed, motors_step_turn=self.motors_step_turn, hybrid_control_gain=self.hybrid_control_gain, encoder_pulses_turn=self.encoder_pulses_turn, idle_current_percentage=self.idle_current_percentage, motor_current=self.motor_current, current_loop_gain=self.current_loop_gain)
@@ -660,6 +662,8 @@ class AMCIDriver(QtCore.QThread):
 
         with self.via:
             data, = self.via.read( [(f'@4/150/3=(INT){word0},{word1},{word2},{word3},{word4},{word5},{word6},{word7},{word8},{word9}', ("INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT"))])
+            if self.verbose:
+                print(f'@4/150/3=(INT){word0},{word1},{word2},{word3},{word4},{word5},{word6},{word7},{word8},{word9}')
         
     def request_write_absolute_move(self, target_position, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=5):
         #print(target_position, programmed_speed)

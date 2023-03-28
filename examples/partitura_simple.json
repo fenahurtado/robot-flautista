@@ -1,0 +1,118 @@
+{
+    "fingers": [
+        {
+            "note": "D3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "E3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "F#3",
+            "time": 2.0,
+            "type": 2
+        }
+    ],
+    "init_pos": {
+        "offset": 0.5,
+        "r": 8.5,
+        "theta": 43.0,
+        "type": 0
+    },
+    "phrase": [
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "deformation": 0,
+            "flow": 16.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": 0.5,
+            "r": 8.5,
+            "theta": 43.0,
+            "time": 0.1,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "deformation": 0,
+            "flow": 16.0,
+            "jerk": 0,
+            "move": 0,
+            "offset": 0.5,
+            "r": 8.5,
+            "theta": 43.0,
+            "time": 0.6005478643892399,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "deformation": 0,
+            "flow": 16.5,
+            "jerk": 0,
+            "move": 1,
+            "offset": 0.5,
+            "r": 8.0,
+            "theta": 44.0,
+            "time": 0.29945213561076006,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "deformation": 0,
+            "flow": 16.5,
+            "jerk": 0,
+            "move": 0,
+            "offset": 0.5,
+            "r": 8.0,
+            "theta": 44.0,
+            "time": 0.7744485905741356,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "deformation": 0,
+            "flow": 17.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": 0.5,
+            "r": 7.5,
+            "theta": 44.5,
+            "time": 0.22555140942586438,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 153.0,
+            "deceleration": 153.0,
+            "deformation": 0,
+            "flow": 17.0,
+            "jerk": 0,
+            "move": 0,
+            "offset": 0.5,
+            "r": 7.5,
+            "theta": 44.5,
+            "time": 2.0,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        }
+    ],
+    "timestamp": "16/01/2023 17:36:18"
+}

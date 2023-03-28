@@ -1,6 +1,16 @@
 import matplotlib.pyplot as plt
 from utils.cinematica import *
 import json
+from scipy import signal
+import csv
+
+with open("exercises/filtro_vel.csv") as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    model = []
+    for i in csv_reader:
+        model.append(list(map(lambda k: float(k), i)))
+    B_vel = model[0]
+    A_vel = model[1]
 
 def get_route_positions(xi, zi, alphai, xf, zf, alphaf, divisions=20, plot=False, aprox=True):
     ri, thetai, oi = get_r_theta_o(xi, zi, alphai)
@@ -134,6 +144,72 @@ def get_route_a_b(initial_state, final_state, acc=20, dec=20, T=None, divisions=
     route['t'].append(T)
     return route
 
+def get_route(initial_state, final_state, acc=20, dec=20, T=None, divisions=100, aprox=False):
+    x_points, z_points, alpha_points, d = get_route_positions(*initial_state.cart_coords(), *final_state.cart_coords(), divisions=divisions, plot=False)
+    global B_vel, A_vel
+    if not T:
+        T = 0.1
+        while True:
+            if not max_dist_rec(acc, dec, T) < d[-1]:
+                break
+            T += 0.1
+        T = T*2
+    else:
+        if max_dist_rec(acc, dec, T) < d[-1]:
+            print(f'Impossible to achieve such position with given acceleration and deceleration. {d[-1]} > {max_dist_rec(acc, dec, T)}')
+            return None
+    x_points, z_points, alpha_points, d = get_route_positions(*initial_state.cart_coords(), *final_state.cart_coords(), divisions=int(divisions*T), plot=False)
+    vel, t_acc, t_dec = plan_speed_curve(d[-1], acc, dec, T)
+    temps = plan_temps_according_to_speed(d, vel, t_acc, t_dec, acc, dec)
+    route = plan_route(x_points, z_points, alpha_points, temps, aprox=aprox)
+    route['x'].append(x_mm_to_units(final_state.x, aprox=aprox))
+    route['z'].append(z_mm_to_units(final_state.z, aprox=aprox))
+    route['alpha'].append(alpha_angle_to_units(final_state.alpha, aprox=aprox))
+    route['t'].append(T)
+
+    route['x_vel'] = [0, 0]
+    route['z_vel'] = [0, 0]
+    route['alpha_vel'] = [0, 0]
+    
+    for i in range(len(route['t']) - 1):
+        dT = (route['t'][i + 1] - route['t'][i])
+        if dT == 0:
+            route['x_vel'].append(0)
+            route['z_vel'].append(0)
+            route['alpha_vel'].append(0)
+        else:
+            route['x_vel'].append(int((route['x'][i + 1] - route['x'][i]) / dT))
+            #print(dT, route['x_vel'][-1], route['x'][i + 1] - route['x'][i], route['x'][i])
+            route['z_vel'].append(int((route['z'][i + 1] - route['z'][i]) / dT))
+            route['alpha_vel'].append(int((route['alpha'][i + 1] - route['alpha'][i]) / dT))
+    route['x_vel'].append(0)
+    route['z_vel'].append(0)
+    route['alpha_vel'].append(0)
+    # route['x_vel'] = signal.lfilter(B_vel, A_vel, route['x_vel'])
+    # route['z_vel'] = signal.lfilter(B_vel, A_vel, route['z_vel'])
+    # route['alpha_vel'] = signal.lfilter(B_vel, A_vel, route['alpha_vel'])
+
+    route['x'] = list(map(lambda x: round(x), route['x']))
+    route['z'] = list(map(lambda x: round(x), route['z']))
+    route['alpha'] = list(map(lambda x: round(x), route['alpha']))
+
+    route['x_vel'] = list(map(lambda x: round(x), route['x_vel'][2:]))
+    route['z_vel'] = list(map(lambda x: round(x), route['z_vel'][2:]))
+    route['alpha_vel'] = list(map(lambda x: round(x), route['alpha_vel'][2:]))
+
+    Fi = initial_state.flow
+    Ff = final_state.flow
+    deformation = 1
+    route['flow'] = []
+
+    for i in range(len(route['t'])):
+        t = route['t'][i]
+        ramp = Fi + (Ff-Fi) * (t / T) ** deformation
+        flow_sat = max(0,min(50, ramp))
+        route['flow'].append(flow_sat)
+        
+    return route
+
 def get_route_complete(path, go_back=True):
     with open(path) as file:
         data = json.load(file)
@@ -145,7 +221,8 @@ def get_route_complete(path, go_back=True):
              'z': [z_mm_to_units(initial_state.z)],
              'alpha': [alpha_angle_to_units(initial_state.alpha)],
              'flow': [0],
-             't': [0]} #get_route_a_b(state_at_begining, initial_state, acc=20, dec=20, T=None, divisions=200)
+             't': [0],
+             't_flow': [0]} #get_route_a_b(state_at_begining, initial_state, acc=20, dec=20, T=None, divisions=200)
 
     for act in data['phrase']:
         if act['move']:
@@ -156,6 +233,7 @@ def get_route_complete(path, go_back=True):
             b = State(act['r'], act['theta'], act['offset'], act['flow'])
             route_add = get_route_a_b(a, b, acc=act['acceleration'], dec=act['deceleration'], T=act['time'], divisions=int(act['time']*100), aprox=False)
             #print(route_add['x'])
+            route_add['t_flow'] = []
 
             Fi = route['flow'][-1]
             Ff = act['flow']
@@ -172,6 +250,7 @@ def get_route_complete(path, go_back=True):
                 vibr = ramp * vibrato_amp * sin(t * 2*pi * vibrato_freq)
                 flow_sat = max(0,min(50, ramp+vibr))
                 route['flow'].append(flow_sat)
+                route_add['t_flow'].append(t)
                 t += 0.01
 
 
@@ -179,6 +258,7 @@ def get_route_complete(path, go_back=True):
             route['z'] += route_add['z']
             route['alpha'] += route_add['alpha']
             route['t'] += route_add['t']
+            route['t_flow'] += route_add['t_flow']
         else:
             t = route['t'][-1]
             T  = act['time']
@@ -194,6 +274,7 @@ def get_route_complete(path, go_back=True):
                 route['z'].append(route['z'][-1])
                 route['alpha'].append(route['alpha'][-1])
                 route['t'].append(t)
+                route['t_flow'].append(t)
 
     x = x_units_to_mm(route['x'][-1])
     z = z_units_to_mm(route['z'][-1])
@@ -201,6 +282,7 @@ def get_route_complete(path, go_back=True):
     a = State(*get_r_theta_o(x, z, alpha), 0)
     b = State(initial_state.r, initial_state.theta, initial_state.o, 0)
     route_add = get_route_a_b(a, b, acc=99, dec=99, T=2, divisions=int(2*100), aprox=False)
+    route_add['t_flow'] = []
 
     Fi = route['flow'][-1]
     Ff = 0
@@ -217,13 +299,15 @@ def get_route_complete(path, go_back=True):
         vibr = ramp * vibrato_amp * sin(t * 2*pi * vibrato_freq)
         flow_sat = max(0,min(50, ramp+vibr))
         route['flow'].append(flow_sat)
+        route_add['t_flow'].append(t)
         t += 0.01
 
     if go_back:
         route['x'] += route_add['x']
         route['z'] += route_add['z']
         route['alpha'] += route_add['alpha']
-        route['t'] += route_add['t']        
+        route['t'] += route_add['t']   
+        route['t_flow'] += route_add['t_flow']
     
     
     route['x_vel'] = []
@@ -256,25 +340,54 @@ def get_route_complete(path, go_back=True):
     t = 0
     route['notes'] = []
     for note in data['fingers']:
-        route['notes'].append((t, note['note']))
         t += note['time']
+        route['notes'].append((t, note['note']))
         
     return route
 
-def get_value_from_func(t, func):
-    t_val = min(int((len(func) - 1) * t / func[-1][0]), len(func) - 1)
+def get_value_from_func(t, func, approx=True):
+    t_val = min(int((len(func) - 1) * t / max(func[-1][0], 0.000001)), len(func) - 1)
     if t < func[t_val][0]:
         while t < func[t_val][0]:
             t_val -= 1
             if t_val < 0:
-                return func[0][1]
-        return round(func[t_val][1] + ((t - func[t_val][0]) / (func[t_val + 1][0] - func[t_val][0])) * (func[t_val + 1][1] - func[t_val][1]))
+                if approx:
+                    return round(func[0][1])
+                else:
+                    return func[0][1]
+        r = func[t_val][1] + ((t - func[t_val][0]) / (func[t_val + 1][0] - func[t_val][0])) * (func[t_val + 1][1] - func[t_val][1])
+        if approx:
+            return round(r)
+        else:
+            return r
     else:
         while t > func[t_val][0]:
             t_val += 1
             if t_val >= len(func):
-                return func[-1][1]
-        return round(func[t_val - 1][1] + ((t - func[t_val - 1][0]) / (func[t_val][0] - func[t_val - 1][0])) * (func[t_val][1] - func[t_val - 1][1]))
+                if approx:
+                    return round(func[-1][1])
+                else:
+                    return func[-1][1]
+        r = func[t_val - 1][1] + ((t - func[t_val - 1][0]) / (func[t_val][0] - func[t_val - 1][0])) * (func[t_val][1] - func[t_val - 1][1])
+        if approx:
+            return round(r)
+        else:
+            return r
+
+def get_value_from_func_2d(t, func):
+    t_val = min(int((len(func) - 1) * t / max(0.000001, func[-1][0])), len(func) - 1)
+    if t < func[t_val][0]:
+        while t < func[t_val][0]:
+            t_val -= 1
+            if t_val < 0:
+                return func[0][1], func[0][2]
+        return round(func[t_val][1] + ((t - func[t_val][0]) / (func[t_val + 1][0] - func[t_val][0])) * (func[t_val + 1][1] - func[t_val][1])), round(func[t_val][2] + ((t - func[t_val][0]) / (func[t_val + 1][0] - func[t_val][0])) * (func[t_val + 1][2] - func[t_val][2]))
+    else:
+        while t > func[t_val][0]:
+            t_val += 1
+            if t_val >= len(func):
+                return func[-1][1], func[-1][2]
+        return round(func[t_val - 1][1] + ((t - func[t_val - 1][0]) / (func[t_val][0] - func[t_val - 1][0])) * (func[t_val][1] - func[t_val - 1][1])), round(func[t_val - 1][2] + ((t - func[t_val - 1][0]) / (func[t_val][0] - func[t_val - 1][0])) * (func[t_val][2] - func[t_val - 1][2]))
         
 if __name__ == '__main__':
     path = '/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/escala_1.json'
