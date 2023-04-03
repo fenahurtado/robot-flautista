@@ -81,30 +81,36 @@ def plan_temps_according_to_speed(distances, vel, t_acc, t_dec, acc, dec):
 
 def x_mm_to_units(mm, aprox=True):
     if aprox:
-        return int(mm * 1000 / 8 )
+        return int(mm * 4000 / 8 )
     else:
-        return mm * 1000 / 8
+        return mm * 4000 / 8
 
 def x_units_to_mm(units):
-    return units * 8 / 1000
+    return units * 8 / 4000
+
+def encoder_units_to_mm(units):
+    return units * 8 / 4000
+
+def encoder_units_to_angle(units):
+    return units * 360 / 4000
     
 def z_mm_to_units(mm, aprox=True):
     if aprox:
-        return int(mm * 1000 / 8 )
+        return int(mm * 4000 / 8 )
     else:
-        return mm * 1000 / 8
+        return mm * 4000 / 8
 
 def z_units_to_mm(units):
-    return units * 8 / 1000
+    return units * 8 / 4000
     
 def alpha_angle_to_units(angle, aprox=True):
     if aprox:
-        return int(angle * 10000 / 360)
+        return int(angle * 4000 / 360)
     else:
-        return angle * 10000 / 360
+        return angle * 4000 / 360
 
 def alpha_units_to_angle(units):
-    return units * 360 / 10000
+    return units * 360 / 4000
     
 def plan_route(x_points, z_points, alpha_points, temps, aprox=True):
     points = {'x': [], 'z': [], 'alpha': [], 't': []}

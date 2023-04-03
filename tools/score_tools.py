@@ -250,6 +250,31 @@ def add_vibrato(path, vibrato_amp, vibrato_freq, new_path):
         with open(base_path + '/recent_saves.txt', 'w') as file:
             file.write(new_path)
 
+def change_all_acc(path, new_acc):
+    with open(path) as json_file:
+        input_score = json.load(json_file)
+
+    init_pos = input_score['init_pos']
+    fingers = input_score['fingers']
+    phrase = input_score['phrase']
+
+    for i in phrase:
+        i['acceleration'] = new_acc
+        i['deceleration'] = new_acc
+    
+    data = {'init_pos': init_pos, 'phrase': phrase, 'fingers': fingers, 'timestamp': datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
+    with open(path, 'w') as file:
+        json.dump(data, file, indent=4, sort_keys=True)
+    if 'recent_saves.txt' in os.listdir(base_path):
+        with open(base_path + '/recent_saves.txt', 'r+') as file:
+            content = file.read()
+            file.seek(0, 0)
+            file.write(path + '\n' + content)
+    else:
+        with open(base_path + '/recent_saves.txt', 'w') as file:
+            file.write(path)
+    
+                   
 def add_correction(path, correccion_radio, correccion_theta, correccion_offset, correction_flow, new_path):
     global MAX_ACC, base_path
     
@@ -283,11 +308,12 @@ def add_correction(path, correccion_radio, correccion_theta, correccion_offset, 
             file.write(new_path)
 
 
-if __name__ == "__main__":
-    path = "/home/fernando/Dropbox/UC/Magister/robot-flautista/examples/pachelbel.json"
-    print('En score_tools.py basepath:', base_path)
 
-    add_vibrato(path, 0.2, 4, path)
+if __name__ == "__main__":
+    path = "/home/fernando/Dropbox/UC/Magister/robot-flautista/exercises/bumblebee_super_fast.json"
+    #print('En score_tools.py basepath:', base_path)
+
+    change_all_acc(path, 1000)
 
     # for i in notes:
     #     for j in notes:

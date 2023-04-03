@@ -1,5 +1,6 @@
 from functools import partial
 import sys
+sys.path.insert(0, '/home/fernando/Dropbox/UC/Magister/robot-flautista')
 import threading
 from time import sleep
 
@@ -1053,7 +1054,7 @@ class AMCIWidget(QMainWindow, AMCIWindow):
 def main():
     z_event = threading.Event()
     z_event.set()
-    z_driver = AMCIDriver('192.168.2.103', z_event, connected=True, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'])
+    z_driver = AMCIDriver('192.168.2.102', z_event, connected=True, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'])
     z_driver.start()
 
     app = QApplication(sys.argv)

@@ -206,7 +206,7 @@ class VirtualAxis(threading.Thread):
         self.ref = [(0,self.pos,0)]
 
 class AMCIDriver(threading.Thread):
-    def __init__(self, EIP, hostname, running, virtual_axis, connected=True, disable_anti_resonance_bit=0, enable_stall_detection_bit=0, use_backplane_proximity_bit=0, use_encoder_bit=0, home_to_encoder_z_pulse=0, input_3_function_bits=0, input_2_function_bits=0, input_1_function_bits=0, output_functionality_bit=0, output_state_control_on_network_lost=0, output_state_on_network_lost=0, read_present_configuration=0, save_configuration=0, binary_input_format=0, binary_output_format=0, binary_endian=0, input_3_active_level=0, input_2_active_level=0, input_1_active_level=0, starting_speed=1, motors_step_turn=1000, hybrid_control_gain=0, encoder_pulses_turn=1000, idle_current_percentage=30, motor_current=30, current_loop_gain=5, homing_slow_speed=200, verbose=False, virtual_axis_follow_acceleration=50, virtual_axis_follow_deceleration=50, home=True, virtual_axis_proportional_coef=1):
+    def __init__(self, EIP, hostname, running, virtual_axis, connected=True, disable_anti_resonance_bit=0, enable_stall_detection_bit=0, use_backplane_proximity_bit=0, use_encoder_bit=0, home_to_encoder_z_pulse=0, input_3_function_bits=0, input_2_function_bits=0, input_1_function_bits=0, output_functionality_bit=0, output_state_control_on_network_lost=0, output_state_on_network_lost=0, read_present_configuration=0, save_configuration=0, binary_input_format=0, binary_output_format=0, binary_endian=0, input_3_active_level=0, input_2_active_level=0, input_1_active_level=0, starting_speed=1, motors_step_turn=1000, hybrid_control_gain=1, encoder_pulses_turn=1000, idle_current_percentage=30, motor_current=40, current_loop_gain=5, homing_slow_speed=200, verbose=False, virtual_axis_follow_acceleration=50, virtual_axis_follow_deceleration=50, home=True, virtual_axis_proportional_coef=1, Kp=0, Ki=5, Kd=0.01):
         threading.Thread.__init__(self) # Initialize the threading superclass
         self.EIP = EIP
         self.hostname = hostname
@@ -218,9 +218,11 @@ class AMCIDriver(threading.Thread):
         self.virtual_axis_proportional_coef = virtual_axis_proportional_coef
         self.home = home
         self.forced_break = False
+        self.motor_current = motor_current
 
         self.initial_settings = Setting(disable_anti_resonance_bit, enable_stall_detection_bit, use_backplane_proximity_bit, use_encoder_bit, home_to_encoder_z_pulse, input_3_function_bits, input_2_function_bits, input_1_function_bits, output_functionality_bit, output_state_control_on_network_lost, output_state_on_network_lost, read_present_configuration, save_configuration, binary_input_format, binary_output_format, binary_endian, input_3_active_level, input_2_active_level, input_1_active_level, starting_speed, motors_step_turn, hybrid_control_gain, encoder_pulses_turn, idle_current_percentage, motor_current, current_loop_gain)
-
+        #print(starting_speed, motors_step_turn, hybrid_control_gain, encoder_pulses_turn, idle_current_percentage, motor_current, current_loop_gain)
+        
         self.verbose = verbose
         self.init_params()
         #self.programming_assembly = False
@@ -232,6 +234,17 @@ class AMCIDriver(threading.Thread):
         self.slow_cw_limit_homing = False
         self.homing_movements = []
 
+        self.Kp = Kp
+        self.Ki = Ki
+        self.Kd = Kd
+        self.Ts = 0.01
+        self.e0 = 0
+        self.MV_I0 = 0
+        self.MV = 0
+        self.Ka = 0
+        self.MV_low = 0
+        self.MV_high = 0
+        
         if self.connected:
             self.C1 = self.EIP.explicit_conn(self.hostname)
             self.C1.outAssem = [0 for i in range(20*8)]
@@ -255,27 +268,40 @@ class AMCIDriver(threading.Thread):
 
             sen = self.send_data(self.initial_settings.get_bytes_to_send())
             time.sleep(0.1)
+            data = self.read_input(explicit=True)
+            self.process_incoming_data(data)
+            
 
             return_to_command_mode = self.get_return_to_command_mode_command()
             sen = self.send_data(return_to_command_mode.get_bytes_to_send())
             time.sleep(0.1)
 
-            preset_pos = self.get_preset_position_command(0)
-            sen = self.send_data(preset_pos.get_bytes_to_send())
-            time.sleep(0.1)
+            # preset_pos = self.get_preset_position_command(0)
+            # sen = self.send_data(preset_pos.get_bytes_to_send())
+            # time.sleep(0.1)
 
-            synchrostep_command = self.get_synchrostep_move_command(0, 0, speed=0, acceleration=self.acc, deceleration=self.dec, proportional_coefficient=self.virtual_axis_proportional_coef, network_delay=20)
-            sen = self.send_data(synchrostep_command.get_bytes_to_send())
-            time.sleep(0.1)
+            # preset_encoder = self.get_preset_encoder_position_command(0)
+            # sen = self.send_data(preset_encoder.get_bytes_to_send())
+            # time.sleep(0.1)
+            # self.virtual_axis_proportional_coef
+            synchrostep_command = self.get_synchrostep_move_command(0, 0, speed=0, acceleration=self.acc, deceleration=self.dec, proportional_coefficient=self.virtual_axis_proportional_coef, network_delay=0, encoder=False)
+            #print(synchrostep_command.get_bytes_to_send())
+            # sen = self.send_data(synchrostep_command.get_bytes_to_send())
+            # time.sleep(0.1)
 
             #self.C1.outAssem = synchrostep_command.get_list_to_send()
 
             self.C1.sendFwdOpenReq(100, 150, 110, torpi=50, otrpi=50, priority=ethernetip.ForwardOpenReq.FORWARD_OPEN_CONN_PRIO_HIGH)
             self.C1.produce()
+            
+            stop = self.get_immediate_stop_command()
+            self.C1.outAssem = stop.get_list_to_send()
+            time.sleep(0.1)
 
             # input()
             if self.home:
-                if self.initial_settings.desired_input_1_function_bits == INPUT_FUNCTION_BITS['CCW Limit']:
+                if self.initial_settings.desired_input_2_function_bits == INPUT_FUNCTION_BITS['CCW Limit']:
+                    print("Buscando CCW")
                     self.ccw_find_home_to_limit()
                     self.fast_ccw_limit_homing = True
                     while self.fast_ccw_limit_homing or self.slow_ccw_limit_homing:
@@ -285,42 +311,92 @@ class AMCIDriver(threading.Thread):
                         #break
                         data = self.read_input()
                         self.process_incoming_data(data)
-                    c = self.get_relative_move_command(200, programmed_speed=1000, acceleration=self.acc, deceleration=self.dec)
+                    time.sleep(0.5)
+                    c = self.get_relative_move_command(144*4, programmed_speed=4000, acceleration=self.acc, deceleration=self.dec, motor_current=self.motor_current)
                     self.C1.outAssem = c.get_list_to_send()
                     time.sleep(2)
+
+                    c = self.get_reset_errors_command()
+                    self.C1.outAssem = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_preset_position_command(0)
+                    self.C1.outAssem = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_preset_encoder_position_command(0)
+                    self.C1.outAssem = c.get_list_to_send()
+                    time.sleep(0.1)
+
                     c = self.get_return_to_command_mode_command()
                     self.C1.outAssem = c.get_list_to_send()
                     time.sleep(0.1)
+
                     if self.verbose:
                         print('Homed')
-                elif self.initial_settings.desired_input_1_function_bits == INPUT_FUNCTION_BITS['CW Limit']:
-                    self.alpha_home_switch_pos = 1437
-                    if self.verbose:
-                        print("Buscando home clockwise")
-                    cw_jog = self.get_cw_jog_command(programmed_speed=500)
-                    stop = self.get_immediate_stop_command()
-                    self.C1.outAssem = stop.get_list_to_send()
-                    time.sleep(0.5)
-                    # self.C1.outAssem = cw_jog.get_list_to_send()
-                    # while True:
-                    #     time.sleep(1)
+
+                elif self.initial_settings.desired_input_2_function_bits == INPUT_FUNCTION_BITS['CW Limit']:
+                    print("Buscando CW")
                     self.cw_find_home_to_limit()
                     self.fast_cw_limit_homing = True
                     while self.fast_cw_limit_homing or self.slow_cw_limit_homing:
                         if self.verbose:
-                            print('Still not homed3...')
+                            print('Still not homed...')
                         time.sleep(0.5)
                         #break
                         data = self.read_input()
                         self.process_incoming_data(data)
-                    c = self.get_relative_move_command(-self.alpha_home_switch_pos, programmed_speed=1000, acceleration=self.acc, deceleration=self.dec)
+                    time.sleep(0.5)
+                    c = self.get_relative_move_command(-800, programmed_speed=4000, acceleration=self.acc, deceleration=self.dec, motor_current=self.motor_current)
                     self.C1.outAssem = c.get_list_to_send()
                     time.sleep(2)
+
+                    c = self.get_reset_errors_command()
+                    self.C1.outAssem = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_preset_position_command(0)
+                    self.C1.outAssem = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_preset_encoder_position_command(0)
+                    self.C1.outAssem = c.get_list_to_send()
+                    time.sleep(0.1)
+
                     c = self.get_return_to_command_mode_command()
                     self.C1.outAssem = c.get_list_to_send()
                     time.sleep(0.1)
+
                     if self.verbose:
                         print('Homed')
+                    # print("Buscando CW")
+                    # self.alpha_home_switch_pos = 1437
+                    # if self.verbose:
+                    #     print("Buscando home clockwise")
+                    # cw_jog = self.get_cw_jog_command(programmed_speed=500)
+                    # stop = self.get_immediate_stop_command()
+                    # self.C1.outAssem = stop.get_list_to_send()
+                    # time.sleep(0.5)
+                    # # self.C1.outAssem = cw_jog.get_list_to_send()
+                    # # while True:
+                    # #     time.sleep(1)
+                    # self.cw_find_home_to_limit()
+                    # self.fast_cw_limit_homing = True
+                    # while self.fast_cw_limit_homing or self.slow_cw_limit_homing:
+                    #     if self.verbose:
+                    #         print('Still not homed3...')
+                    #     time.sleep(0.5)
+                    #     #break
+                    #     data = self.read_input()
+                    #     self.process_incoming_data(data)
+                    # c = self.get_relative_move_command(-self.alpha_home_switch_pos, programmed_speed=1000, acceleration=self.acc, deceleration=self.dec)
+                    # self.C1.outAssem = c.get_list_to_send()
+                    # time.sleep(2)
+                    # c = self.get_return_to_command_mode_command()
+                    # self.C1.outAssem = c.get_list_to_send()
+                    # time.sleep(0.1)
+                    # if self.verbose:
+                    #     print('Homed')
                 # else:
                 #     if self.verbose:
                 #         print('Homing through user input')
@@ -332,7 +408,7 @@ class AMCIDriver(threading.Thread):
                 #                 print(f'Moving to {self.homing_move_target}')
                 #             c = self.get_relative_move_command(alpha_angle_to_units(self.homing_move_target)-old_pos, programmed_speed=200)
                 #             self.C1.outAssem = c.get_list_to_send()
-                #             old_pos = alpha_angle_to_units(self.homing_move_target)
+                #             old_pos = alpha_angle_to_units(self.h15oming_move_target)
                 #         time.sleep(0.25)
                 #         c = self.get_return_to_command_mode_command()
                 #         self.C1.outAssem = c.get_list_to_send()
@@ -352,20 +428,43 @@ class AMCIDriver(threading.Thread):
             while self.running.is_set():
                 if self.forced_break:
                     break
-                time.sleep(0.01)
+                time.sleep(self.Ts)
                 data = self.read_input(read_output=False)
                 # if self.verbose:
                 #     print(data)
                 self.process_incoming_data(data)
-                if type(self.virtual_axis.pos) == int and type(self.virtual_axis.vel) == int:
+                corrected_pos, corrected_vel = self.pid_control(self.virtual_axis.pos, self.virtual_axis.vel)
+                if type(corrected_pos) == int and type(corrected_vel) == int:
                     try:
-                        self.set_output(self.virtual_axis.pos, self.virtual_axis.vel)
+                        self.set_output(-corrected_pos, -corrected_vel)
+                        #print(corrected_pos, corrected_vel, self.encoder_position, self.motor_position)
                     except:
                         print(f'Error en referencia: {self.virtual_axis.pos}, {self.virtual_axis.vel}')
                 
             self.C1.stopProduce()
             self.C1.sendFwdCloseReq(100, 150, 110)
 
+    def pid_control(self, ref_pos, ref_vel):
+        SP = ref_pos
+        CV = self.encoder_position
+        e = SP-CV
+        MV_P = self.Kp*e
+        MV_I = self.MV_I0 + self.Ki*self.Ts*e - self.Ka*self.sat(self.MV,self.MV_low,self.MV_high)
+        MV_D = self.Kd*(e-self.e0)/self.Ts
+        #print(MV_P, MV_I, MV_D)
+        self.MV = int(round(SP + MV_P + MV_I + MV_D, 0))
+        self.e0 = e
+        self.MV_I0 = MV_I
+
+        return self.MV, ref_vel
+    
+    def sat(self, x, low, high):
+        if x < low:
+            return low
+        elif x > high:
+            return high
+        return x
+    
     def break_loop(self):
         self.forced_break = True
 
@@ -401,18 +500,17 @@ class AMCIDriver(threading.Thread):
 
     def ccw_find_home_to_limit(self):
         self.fast_ccw_limit_homing = True
-        ccw_jog = self.get_ccw_jog_command(programmed_speed=1000)
+        ccw_jog = self.get_ccw_jog_command(programmed_speed=400, motor_current=self.motor_current)
         self.C1.outAssem = ccw_jog.get_list_to_send()
     
     def cw_find_home_to_limit(self):
         self.fast_cw_limit_homing = True
-        cw_jog = self.get_cw_jog_command(programmed_speed=1000)
-        if self.verbose:
-            print(cw_jog)
+        cw_jog = self.get_cw_jog_command(programmed_speed=4000, motor_current=self.motor_current)
         self.C1.outAssem = cw_jog.get_list_to_send()
 
     def get_reset_errors_command(self):
-        command = Command(reset_errors=1, name='Reset Errors')
+        command = Command(reset_errors=1, enable_driver=0, clear_driver_fault=1, name='Reset Errors')
+        command.desired_command_word_8 = self.motor_current
         return command
 
     def get_immediate_stop_command(self, motor_current=30):
@@ -446,6 +544,13 @@ class AMCIDriver(threading.Thread):
 
     def get_preset_position_command(self, position):
         command = Command(preset_motor_position=1, name='Preset Position')
+        command.desired_command_word_2 = abs(position) // 1000 * sign(position)
+        command.desired_command_word_3 = abs(position)  % 1000 * sign(position)
+        command.desired_command_word_8 = self.motor_current
+        return command
+    
+    def get_preset_encoder_position_command(self, position):
+        command = Command(preset_encoder=1, name='Preset Encoder Position')
         command.desired_command_word_2 = abs(position) // 1000 * sign(position)
         command.desired_command_word_3 = abs(position)  % 1000 * sign(position)
         return command
@@ -525,7 +630,7 @@ class AMCIDriver(threading.Thread):
         self.hybrid_control_gain = 0
         self.encoder_pulses_turn = 0
         self.idle_current_percentage = 0
-        self.motor_current = 0
+        #self.motor_current = 0
         self.current_loop_gain = 0
 
 
@@ -667,7 +772,7 @@ class AMCIDriver(threading.Thread):
         self.C1.outAssem = c.get_list_to_send()
         time.sleep(0.1)
         for step in steps:
-            c = self.get_assembled_segment_command(target_position=step['pos'], programmed_speed=step['speed'], acceleration=step['acc'], deceleration=step['dec'], acceleration_jerk=step['jerk'])
+            c = self.get_assembled_segment_command(target_position=step['pos'], programmed_speed=step['speed'], acceleration=step['acc'], deceleration=step['dec'], acceleration_jerk=step['jerk'], motor_current=motor_current)
             self.C1.outAssem = c.get_list_to_send()
             time.sleep(0.1)
             c = self.get_program_assembled_command()
@@ -688,7 +793,7 @@ class AMCIDriver(threading.Thread):
 
         if mode != self.mode_select_bit:
             if mode:
-                #print('Changed to configuration mode')
+                print('Changed to configuration mode')
                 #print(data)
                 command = self.get_return_to_command_mode_command()
                 self.send_data(command.get_bytes_to_send())
@@ -723,7 +828,7 @@ class AMCIDriver(threading.Thread):
             self.hybrid_control_gain = data[5]
             self.encoder_pulses_turn = data[6]
             self.idle_current_percentage = data[7]
-            self.motor_current = data[8]
+            #self.motor_current = data[8]
             self.current_loop_gain = data[9]
         else: ## command mode
             module_ok = int(word0[1], 2)
@@ -731,25 +836,25 @@ class AMCIDriver(threading.Thread):
             #     self.module_ok_signal.emit(module_ok)
             self.module_ok = module_ok
             configuration_error = int(word0[2], 2)
-            if configuration_error != self.configuration_error:
+            if configuration_error and configuration_error != self.configuration_error:
                 if self.verbose:
                     print('Configuration Error')
                 # self.configuration_error_signal.emit(configuration_error)
             self.configuration_error = configuration_error
             command_error = int(word0[3], 2)
-            if command_error != self.command_error:
+            if command_error and command_error != self.command_error:
                 if self.verbose:
                     print('Command Error')
             #     self.command_error_signal.emit(command_error)
             self.command_error = command_error
             input_error = int(word0[4], 2)
-            if input_error != self.input_error:
+            if input_error and input_error != self.input_error:
                 if self.verbose:
                     print('Input Error')
                 # self.input_error_signal.emit(input_error)
             self.input_error = input_error
             position_invalid = int(word0[5], 2)
-            if position_invalid != self.position_invalid:
+            if position_invalid and position_invalid != self.position_invalid:
                 if self.verbose:
                     print('Position Invalid')
             #     self.position_invalid_signal.emit(position_invalid)
@@ -809,7 +914,7 @@ class AMCIDriver(threading.Thread):
             #     self.driver_is_enabled_signal.emit(driver_is_enabled)
             self.driver_is_enabled = driver_is_enabled
             stall_detected = int(word1[1], 2)
-            if stall_detected != self.stall_detected:
+            if stall_detected and stall_detected != self.stall_detected:
                 if self.verbose:
                     print('Stall detected')
             #     self.stall_detected_signal.emit(stall_detected)
@@ -829,48 +934,47 @@ class AMCIDriver(threading.Thread):
                 #print('limit condition')
                 if self.fast_ccw_limit_homing:
                     if self.verbose:
-                        print('was moving fast')
+                        print('was moving fast ccw')
                     # self.request_write_reset_errors()
                     self.slow_ccw_limit_homing = True
                     self.fast_ccw_limit_homing = False
-                    steps = [{'pos': 1000, 'speed': 500, 'acc': 100, 'dec': 100, 'jerk': 0}, 
-                                {'pos': -1000, 'speed': 200, 'acc': 100, 'dec': 100, 'jerk': 0}]
-                    self.program_run_assembled_move(steps, dwell_move=1, dwell_time=100)
+                    steps = [{'pos': 400, 'speed': 400, 'acc': 400, 'dec': 400, 'jerk': 0}, 
+                                {'pos': -400, 'speed': 100, 'acc': 400, 'dec': 400, 'jerk': 0}]
+                    self.program_run_assembled_move(steps, dwell_move=1, dwell_time=100, motor_current=self.motor_current)
+                    #print("aqui estoy", self.motor_current)
                     # self.request_write_relative_move(target_position=1000, programmed_speed=500)
                     # self.request_write_ccw_jog(programmed_speed=200)
                     # print('Step 1')
                 elif self.slow_ccw_limit_homing:
                     if self.verbose:
-                        print('was moving slow')
-                    c = self.get_reset_errors_command()
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
+                        print('was moving slow ccw')
                     self.slow_ccw_limit_homing = False
-                    c = self.get_preset_position_command(-200)
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
+                    # c = self.get_preset_position_command(200)
+                    # #c2 = self.get_preset_encoder_position_command(-800)
+                    # self.C1.outAssem = c.get_list_to_send()
+                    # time.sleep(0.1)
+                    # print(1)
+                    # data = self.read_input()
+                    # self.process_incoming_data(data)
+                    # print(2)
+                    # #self.C1.outAssem = c2.get_list_to_send()
+                    # #time.sleep(0.1)
                 elif self.fast_cw_limit_homing:
                     if self.verbose:
-                        print('was moving fast')
+                        print('was moving fast cw')
                     # self.request_write_reset_errors()
                     self.slow_cw_limit_homing = True
                     self.fast_cw_limit_homing = False
-                    steps = [{'pos': -500, 'speed': 500, 'acc': 100, 'dec': 100, 'jerk': 0}, 
-                                {'pos': 500, 'speed': 200, 'acc': 100, 'dec': 100, 'jerk': 0}]
-                    self.program_run_assembled_move(steps, dwell_move=1, dwell_time=100)
-                    # self.request_write_relative_move(target_position=1000, programmed_speed=500)
-                    # self.request_write_ccw_jog(programmed_speed=200)
-                    # print('Step 1')
+                    steps = [{'pos': -4000, 'speed': 2000, 'acc': 400, 'dec': 400, 'jerk': 0}, 
+                                {'pos': 4000, 'speed': 800, 'acc': 400, 'dec': 400, 'jerk': 0}]
+                    self.program_run_assembled_move(steps, dwell_move=1, dwell_time=100, motor_current=self.motor_current)
+                    
                 elif self.slow_cw_limit_homing:
                     if self.verbose:
-                        print('was moving slow')
-                    c = self.get_reset_errors_command()
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
+                        print('was moving slow cw')
                     self.slow_cw_limit_homing = False
-                    c = self.get_preset_position_command(self.alpha_home_switch_pos)
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
+                    #self.C1.outAssem = c2.get_list_to_send()
+                    #time.sleep(0.1)
             # if limit_condition != self.limit_condition:
             #     self.limit_condition_signal.emit(limit_condition)
             self.limit_condition = limit_condition
@@ -928,13 +1032,19 @@ class AMCIDriver(threading.Thread):
             motor_position = pos1*1000 + pos2
             # if motor_position != self.motor_position:
                 # self.motor_position_signal.emit(motor_position)
-            self.motor_position = motor_position
+            self.motor_position = -motor_position
             # if self.verbose:
             #     print(self.motor_position)
-            encoder_position = data[4]*1000 + data[5]
+            pos1 = data[4]
+            pos2 = data[5]
+            if pos1 > 2**15:
+                pos1 = pos1 - 2**16
+            if pos2 > 2**15:
+                pos2 = pos2 - 2**16
+            encoder_position = pos1*1000 + pos2
             # if encoder_position != self.encoder_position:
                 # self.encoder_position_signal.emit(encoder_position)
-            self.encoder_position = encoder_position
+            self.encoder_position = -encoder_position
             captured_encoder_position = data[6]*1000 + data[7]
             # if captured_encoder_position != self.captured_encoder_position:
                 # self.captured_encoder_position_signal.emit(captured_encoder_position)
@@ -986,8 +1096,18 @@ class AMCIDriver(threading.Thread):
     def send_data(self, data):
         return self.C1.setAttrSingle(0x04, 150, 0x03, data)
 
-    def get_synchrostep_move_command(self, position, direction, speed=200, acceleration=50, deceleration=50, proportional_coefficient=1, network_delay=0):
-        command = Command(virtual_position_follower=1, name='Synchrostep Move')
+    def get_synchrostep_move_command(self, position, direction, speed=200, acceleration=50, deceleration=50, proportional_coefficient=1, network_delay=0, encoder=False):
+        command = Command(name='Synchrostep Move')
+        if encoder:
+            command.desired_virtual_encoder_follower = 1
+            command.desired_virtual_position_follower = 0
+            #command.desired_encoder_registration_move = 1
+            command.desired_hybrid_control_enable = 1
+        else:
+            command.desired_virtual_encoder_follower = 0
+            command.desired_virtual_position_follower = 1
+            command.desired_hybrid_control_enable = 0
+            command.desired_encoder_registration_move = 0
         if direction:
             command.desired_jog_cw = 1
             command.desired_jog_ccw = 0
@@ -1333,7 +1453,7 @@ class Microphone(threading.Thread):
 
     def run(self):
         if self.connected:
-            print(sd.query_devices())
+            #print(sd.query_devices())
             with sd.InputStream(samplerate=self.sr, channels=1, callback=self.micCallback, device=0, latency='high'):#,  blocksize=300000): #, latency='high'
                 while self.running.is_set():
                     sd.sleep(50)
@@ -1383,9 +1503,12 @@ class Musician(threading.Thread):
         else:
             self.EIP = None
 
-        self.x_driver = AMCIDriver(self.EIP, connections[0], running, self.x_virtual_axis, connected=self.x_connect, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=100, virtual_axis_follow_deceleration=100, home=home)
-        self.z_driver = AMCIDriver(self.EIP, connections[1], running, self.z_virtual_axis, connected=self.z_connect, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=100, virtual_axis_follow_deceleration=100, home=home)
-        self.alpha_driver = AMCIDriver(self.EIP, connections[2], running, self.alpha_virtual_axis, connected=self.alpha_connect, starting_speed=1, verbose=True, input_1_function_bits=INPUT_FUNCTION_BITS['CW Limit'], motors_step_turn=10000, virtual_axis_follow_acceleration=1000, virtual_axis_follow_deceleration=1000, home=home, virtual_axis_proportional_coef=10)
+        self.x_driver = AMCIDriver(self.EIP, connections[0], running, self.x_virtual_axis, connected=self.x_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0.01)
+        
+        self.z_driver = AMCIDriver(self.EIP, connections[1], running, self.z_virtual_axis, connected=self.z_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0.01)
+        
+        self.alpha_driver = AMCIDriver(self.EIP, connections[2], running, self.alpha_virtual_axis, connected=self.alpha_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=home, use_encoder_bit=1, motor_current=7, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=1, Kd=0.01)
+
         self.flow_driver = FlowControllerDriver(self.EIP, connections[3], running, self.virtual_flow, connected=self.flow_connect, verbose=False) 
         try:
             self.fingers_driver = FingersDriver('/dev/ttyACM0', running, connected=self.fingers_connect, verbose=False)
@@ -1437,9 +1560,9 @@ class Musician(threading.Thread):
 
     def move_to(self, desired_state, T=None, only_x=False, only_z=False, only_alpha=False, only_flow=False):
         my_state = State(0, 0, 0, 0)
-        my_state.x = x_units_to_mm(self.x_driver.motor_position)
-        my_state.z = z_units_to_mm(self.z_driver.motor_position)
-        my_state.alpha = alpha_units_to_angle(self.alpha_driver.motor_position)
+        my_state.x = encoder_units_to_mm(self.x_driver.encoder_position)
+        my_state.z = encoder_units_to_mm(self.z_driver.motor_position)
+        my_state.alpha = encoder_units_to_angle(self.alpha_driver.motor_position)
         my_state.flow = self.flow_driver.mass_flow_reading
         # print(my_state, desired_state)
         route = get_route(my_state, desired_state, T=T, acc=50, dec=50)
@@ -1674,9 +1797,9 @@ class Memory(threading.Thread):
             self.ref_state.z = z_units_to_mm(self.z_reference.pos)
             self.ref_state.alpha = alpha_units_to_angle(self.alpha_reference.pos)
             self.ref_state.flow = self.flow_reference.flow
-            self.real_state.x = x_units_to_mm(self.x_driver.motor_position)
-            self.real_state.z = z_units_to_mm(self.z_driver.motor_position)
-            self.real_state.alpha = alpha_units_to_angle(self.alpha_driver.motor_position)
+            self.real_state.x = encoder_units_to_mm(self.x_driver.encoder_position)
+            self.real_state.z = z_units_to_mm(self.z_driver.encoder_position)
+            self.real_state.alpha = alpha_units_to_angle(self.alpha_driver.encoder_position)
             self.real_state.flow = self.flow_controller.mass_flow_reading
 
             self.x_ref[:-1] = self.x_ref[1:]                      # shift data in the temporal mean 1 sample left
