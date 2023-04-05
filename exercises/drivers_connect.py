@@ -312,7 +312,7 @@ class AMCIDriver(threading.Thread):
                         data = self.read_input()
                         self.process_incoming_data(data)
                     time.sleep(0.5)
-                    c = self.get_relative_move_command(144*4, programmed_speed=4000, acceleration=self.acc, deceleration=self.dec, motor_current=self.motor_current)
+                    c = self.get_relative_move_command(565, programmed_speed=1000, acceleration=self.acc, deceleration=self.dec, motor_current=self.motor_current)
                     self.C1.outAssem = c.get_list_to_send()
                     time.sleep(2)
 
@@ -1507,7 +1507,7 @@ class Musician(threading.Thread):
         
         self.z_driver = AMCIDriver(self.EIP, connections[1], running, self.z_virtual_axis, connected=self.z_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0.01)
         
-        self.alpha_driver = AMCIDriver(self.EIP, connections[2], running, self.alpha_virtual_axis, connected=self.alpha_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=home, use_encoder_bit=1, motor_current=7, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=1, Kd=0.01)
+        self.alpha_driver = AMCIDriver(self.EIP, connections[2], running, self.alpha_virtual_axis, connected=self.alpha_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=1, Kd=0.01)
 
         self.flow_driver = FlowControllerDriver(self.EIP, connections[3], running, self.virtual_flow, connected=self.flow_connect, verbose=False) 
         try:

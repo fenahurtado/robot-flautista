@@ -13,7 +13,7 @@ event = threading.Event()
 event.set()
 
 t0 = time()
-pierre = Musician(host, connections, event, fingers_connect=False, x_connect=False, z_connect=False, alpha_connect=False, flow_connect=False, preasure_sensor_connect=True)
+pierre = Musician(host, connections, event, fingers_connect=False, x_connect=False, z_connect=False, alpha_connect=True, flow_connect=False, preasure_sensor_connect=True)
 pierre.start()
 
 win = Window(app, event, pierre)
