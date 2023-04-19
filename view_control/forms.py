@@ -399,7 +399,7 @@ class NoteWidget(QWidget):
         path.addRoundedRect(QtCore.QRectF(self.rect()), radius, radius)
         mask = QtGui.QRegion(path.toFillPolygon().toPolygon())
         self.setMask(mask)
-        QtGui.QMainWindow.resizeEvent(self, event)
+        #QtGui.QMainWindow.resizeEvent(self, event)
 
     def mousePressEvent(self, a0: QtGui.QMouseEvent) -> None:
         if self.blocked:
@@ -450,12 +450,17 @@ class StatesFromNotesForm(QDialog, StatesFromNotesDialog):
 
         self.accelerationSpinBox.valueChanged.connect(self.change_acc)
         self.minTimeSpinBox.valueChanged.connect(self.change_min_time)
+        self.button_2.clicked.connect(self.select_all)
 
     def change_acc(self, value):
         self.data[0] = value
     
     def change_min_time(self, value):
         self.data[2] = value
+    
+    def select_all(self):
+        for i in self.boxes:
+            i.select()
 
 class ZoomScoreForm(QDialog, ZoomScoreDialog):
     def __init__(self, parent=None, data=[0]):

@@ -7,7 +7,9 @@ from scipy import signal
 from librosa import yin, note_to_hz
 from scipy.io.wavfile import write
 
-sys.path.insert(0, '/home/fernando/Dropbox/UC/Magister/robot-flautista')
+#sys.path.insert(0, '/home/fernando/Dropbox/UC/Magister/robot-flautista')
+sys.path.insert(0, 'C:/Users/ferna/Dropbox/UC/Magister/robot-flautista')
+
 import threading
 import lib.ethernet_ip.ethernetip as ethernetip
 from utils.motor_route import *
@@ -312,19 +314,25 @@ class AMCIDriver(threading.Thread):
                         data = self.read_input()
                         self.process_incoming_data(data)
                     time.sleep(0.5)
-                    c = self.get_relative_move_command(565, programmed_speed=1000, acceleration=self.acc, deceleration=self.dec, motor_current=self.motor_current)
+
+                    c = self.get_preset_encoder_position_command(-566)
                     self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(2)
+                    time.sleep(0.1)
+
+                    c = self.get_preset_position_command(-566)
+                    self.C1.outAssem = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_relative_move_command(566, programmed_speed=1000, acceleration=self.acc, deceleration=self.dec, motor_current=self.motor_current)
+                    self.C1.outAssem = c.get_list_to_send()
+                    time.sleep(0.1)
+                    while True:
+                        data = self.read_input()
+                        self.process_incoming_data(data)
+                        if self.move_complete:
+                            break
 
                     c = self.get_reset_errors_command()
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-
-                    c = self.get_preset_position_command(0)
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-
-                    c = self.get_preset_encoder_position_command(0)
                     self.C1.outAssem = c.get_list_to_send()
                     time.sleep(0.1)
 
@@ -505,11 +513,11 @@ class AMCIDriver(threading.Thread):
     
     def cw_find_home_to_limit(self):
         self.fast_cw_limit_homing = True
-        cw_jog = self.get_cw_jog_command(programmed_speed=4000, motor_current=self.motor_current)
+        cw_jog = self.get_cw_jog_command(programmed_speed=4000, acceleration=5, motor_current=self.motor_current)
         self.C1.outAssem = cw_jog.get_list_to_send()
 
     def get_reset_errors_command(self):
-        command = Command(reset_errors=1, enable_driver=0, clear_driver_fault=1, name='Reset Errors')
+        command = Command(reset_errors=1, enable_driver=1, clear_driver_fault=1, name='Reset Errors')
         command.desired_command_word_8 = self.motor_current
         return command
 
@@ -939,7 +947,7 @@ class AMCIDriver(threading.Thread):
                     self.slow_ccw_limit_homing = True
                     self.fast_ccw_limit_homing = False
                     steps = [{'pos': 400, 'speed': 400, 'acc': 400, 'dec': 400, 'jerk': 0}, 
-                                {'pos': -400, 'speed': 100, 'acc': 400, 'dec': 400, 'jerk': 0}]
+                                {'pos': -450, 'speed': 100, 'acc': 400, 'dec': 400, 'jerk': 0}]
                     self.program_run_assembled_move(steps, dwell_move=1, dwell_time=100, motor_current=self.motor_current)
                     #print("aqui estoy", self.motor_current)
                     # self.request_write_relative_move(target_position=1000, programmed_speed=500)
@@ -966,7 +974,7 @@ class AMCIDriver(threading.Thread):
                     self.slow_cw_limit_homing = True
                     self.fast_cw_limit_homing = False
                     steps = [{'pos': -4000, 'speed': 2000, 'acc': 400, 'dec': 400, 'jerk': 0}, 
-                                {'pos': 4000, 'speed': 800, 'acc': 400, 'dec': 400, 'jerk': 0}]
+                                {'pos': 4500, 'speed': 800, 'acc': 400, 'dec': 400, 'jerk': 0}]
                     self.program_run_assembled_move(steps, dwell_move=1, dwell_time=100, motor_current=self.motor_current)
                     
                 elif self.slow_cw_limit_homing:
@@ -1329,12 +1337,12 @@ class VirtualFingers(threading.Thread):
         self.changeEvent = threading.Event()
         
     def run(self):
-        note_time = 0
-        next_note_time = 0
+        self.note_time = 0
+        self.next_note_time = 0
         while self.running.is_set():
             if len(self.ref) > 0:
-                next_note_time, self.note = self.ref.pop(0)
-                sleep_time = next_note_time - note_time
+                self.next_note_time, self.note = self.ref.pop(0)
+                sleep_time = self.next_note_time - self.note_time
                 self.fingers_driver.request_finger_action(self.note)
                 if self.verbose:
                     print(sleep_time, self.note)
@@ -1342,7 +1350,7 @@ class VirtualFingers(threading.Thread):
                 sleep_time = self.interval
             self.changeEvent.wait(timeout=sleep_time)
             self.changeEvent.clear()
-            note_time = next_note_time
+            self.note_time = self.next_note_time
     
     def stop(self):
         self.ref = []
@@ -1431,8 +1439,8 @@ class Microphone(threading.Thread):
         #senal_filtrada2 = signal.lfilter(self.B2, self.A2, senal_filtrada1)
         self.last_mic_data = np.hstack((self.last_mic_data, np.transpose(indata)[0]))
         self.last_mic_data = self.last_mic_data[-self.max_num_points:]
-        # if self.saving:
-        #     self.data = np.hstack((self.data, np.transpose(indata)[0]))
+        if self.saving:
+            self.data = np.hstack((self.data, np.transpose(indata)[0]))
             #print(self.data.size)
 
     def start_saving(self):
@@ -1454,14 +1462,15 @@ class Microphone(threading.Thread):
     def run(self):
         if self.connected:
             #print(sd.query_devices())
-            with sd.InputStream(samplerate=self.sr, channels=1, callback=self.micCallback, device=0, latency='high'):#,  blocksize=300000): #, latency='high'
+            with sd.InputStream(samplerate=self.sr, channels=1, callback=self.micCallback, device=1, latency='high'):#,  blocksize=300000): #, latency='high'
                 while self.running.is_set():
                     sd.sleep(50)
                     #pitches, harmonic_rates, argmins, times = compute_yin(self.last_mic_data, self.sr, f0_max=2000)#, w_len=int(len(self.last_mic_data)-1), harmo_thresh=0.1,f0_max=self.sr/2, w_step=int(len(self.last_mic_data)-1)) 
                     #senal_filtrada1 = signal.lfilter(self.flt, self.A, self.last_mic_data)
                     #senal_filtrada2 = signal.lfilter(self.B2, self.A2, senal_filtrada1)
 
-                    pitches = yin(self.last_mic_data, sr=self.sr, fmin=100, fmax=note_to_hz('C7'), trough_threshold=0.1) #, trough_threshold=0.0001)]
+                    pitches = yin(self.last_mic_data, sr=self.sr, fmin=note_to_hz('C2'), frame_length=4410, fmax=note_to_hz('C7'), trough_threshold=0.00001) #, trough_threshold=0.0001)]
+                    # fmax = note_to_hz('C7')
                     #print(pitches[-1])
                     #print(1/(self.last_mic_data.shape[0]*(1/self.sr)), pitches[-1])
                     #compute_yin() NUT = 1
@@ -1511,7 +1520,7 @@ class Musician(threading.Thread):
 
         self.flow_driver = FlowControllerDriver(self.EIP, connections[3], running, self.virtual_flow, connected=self.flow_connect, verbose=False) 
         try:
-            self.fingers_driver = FingersDriver('/dev/ttyACM0', running, connected=self.fingers_connect, verbose=False)
+            self.fingers_driver = FingersDriver('COM3', running, connected=self.fingers_connect, verbose=False)
         except:
             try:
                 self.fingers_driver = FingersDriver('/dev/ttyACM1', running, connected=self.fingers_connect, verbose=False)
@@ -1614,6 +1623,9 @@ class Musician(threading.Thread):
         self.loaded_route_alpha = []
         self.loaded_route_flow = []
         self.loaded_route_notes = route['notes']
+        self.virtual_fingers.note_time = 0
+        self.virtual_fingers.next_note_time = 0
+        #print(self.loaded_route_notes)
         for i in range(len(route['t'])):
             self.loaded_route_x.append([route['t'][i], route['x'][i], route['x_vel'][i]])
             self.loaded_route_z.append([route['t'][i], route['z'][i], route['z_vel'][i]])
@@ -1895,7 +1907,7 @@ if __name__ == "__main__":
         elif t == "r":
             mic.start_saving()
         elif t == "s":
-            mic.finish_saving("/home/fernando/Dropbox/UC/Magister/robot-flautista/exercises/data/escala2.wav")
+            mic.finish_saving("C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/escala2.wav")
 
     # host = "192.168.2.10"
     # connections = ["192.168.2.102", "192.168.2.104", "192.168.2.103", "192.168.2.101", "192.168.2.100"]

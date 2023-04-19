@@ -1182,6 +1182,7 @@ class Window(QMainWindow, Ui_MainWindow):
         T   = actionData['time']
         if max_dist_rec(acc, dec, T) < d[-1]:
             print(f'Impossible to achieve such position with given acceleration and deceleration. {d[-1]} > {max_dist_rec(acc, dec, T)}')
+            #print(3, acc, dec)
             return False
 
         return True

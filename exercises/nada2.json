@@ -1,0 +1,228 @@
+{
+    "fingers": [
+        {
+            "note": "C4",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "B3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "A#3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "A#3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "A3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "G#3",
+            "time": 1.0,
+            "type": 2
+        },
+        {
+            "note": "G3",
+            "time": 1.0,
+            "type": 2
+        }
+    ],
+    "init_pos": {
+        "offset": 0.6,
+        "r": 6.4,
+        "theta": 31.0,
+        "type": 0
+    },
+    "phrase": [
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 18.5,
+            "jerk": 0,
+            "move": 1,
+            "offset": 0.6,
+            "r": 6.4,
+            "theta": 31.0,
+            "time": 0.1,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 18.5,
+            "jerk": 0,
+            "move": 0,
+            "offset": 0.6,
+            "r": 6.4,
+            "theta": 31.0,
+            "time": 0.7811487274645504,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 18.5,
+            "jerk": 0,
+            "move": 1,
+            "offset": 0.8,
+            "r": 6.5,
+            "theta": 31.3,
+            "time": 0.11885127253544962,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 18.5,
+            "jerk": 0,
+            "move": 0,
+            "offset": 0.8,
+            "r": 6.5,
+            "theta": 31.3,
+            "time": 0.8783935255543087,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 18.5,
+            "jerk": 0,
+            "move": 1,
+            "offset": 1.0,
+            "r": 6.7,
+            "theta": 31.6,
+            "time": 0.12160647444569132,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 18.5,
+            "jerk": 0,
+            "move": 0,
+            "offset": 1.0,
+            "r": 6.7,
+            "theta": 31.6,
+            "time": 1.7030988120168224,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 17.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": 1.3,
+            "r": 7.0,
+            "theta": 34.0,
+            "time": 0.29690118798317766,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 17.0,
+            "jerk": 0,
+            "move": 0,
+            "offset": 1.3,
+            "r": 7.0,
+            "theta": 34.0,
+            "time": 0.901871327036917,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 15.5,
+            "jerk": 0,
+            "move": 1,
+            "offset": 0.8,
+            "r": 7.0,
+            "theta": 34.4,
+            "time": 0.09812867296308306,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 15.5,
+            "jerk": 0,
+            "move": 0,
+            "offset": 0.8,
+            "r": 7.0,
+            "theta": 34.4,
+            "time": 0.9036925586470097,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 14.0,
+            "jerk": 0,
+            "move": 1,
+            "offset": 0.3,
+            "r": 7.0,
+            "theta": 34.5,
+            "time": 0.09630744135299033,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        },
+        {
+            "acceleration": 170.0,
+            "deceleration": 170.0,
+            "deformation": 0,
+            "flow": 14.0,
+            "jerk": 0,
+            "move": 0,
+            "offset": 0.3,
+            "r": 7.0,
+            "theta": 34.5,
+            "time": 1.0,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        }
+    ],
+    "timestamp": "14/04/2023 12:04:22"
+}

@@ -140,6 +140,7 @@ def get_route_a_b(initial_state, final_state, acc=20, dec=20, T=None, divisions=
     else:
         if max_dist_rec(acc, dec, T) < d[-1]:
             print(f'Impossible to achieve such position with given acceleration and deceleration. {d[-1]} > {max_dist_rec(acc, dec, T)}')
+            #print(1, acc, dec)
             return None
     vel, t_acc, t_dec = plan_speed_curve(d[-1], acc, dec, T)
     temps = plan_temps_according_to_speed(d, vel, t_acc, t_dec, acc, dec)
@@ -163,6 +164,7 @@ def get_route(initial_state, final_state, acc=20, dec=20, T=None, divisions=100,
     else:
         if max_dist_rec(acc, dec, T) < d[-1]:
             print(f'Impossible to achieve such position with given acceleration and deceleration. {d[-1]} > {max_dist_rec(acc, dec, T)}')
+            #print(2, acc, dec)
             return None
     x_points, z_points, alpha_points, d = get_route_positions(*initial_state.cart_coords(), *final_state.cart_coords(), divisions=int(divisions*T), plot=False)
     vel, t_acc, t_dec = plan_speed_curve(d[-1], acc, dec, T)

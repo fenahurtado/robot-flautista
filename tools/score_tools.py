@@ -20,7 +20,7 @@ if __name__ == "__main__":
 from utils.cinematica import State
 from utils.motor_route import get_route_positions
 
-MAX_ACC = 153.0
+MAX_ACC = 1530
 base_path = os.path.dirname(os.path.realpath(__file__))
 
 notes = ['D3','D#3','E3','F3','F#3','G3','G#3','A3','A#3','B3','C4','C#4','D4','D#4','E4','F4','F#4','G4','G#4','A4','A#4','B4','C5','C#5','D5','D#5','E5','F5','F#5','G5','G#5','A5','C6']
@@ -39,6 +39,8 @@ def dist_notas(note_1, note_2):
     state1 = State(note_1_pos['r'], note_1_pos['theta'], note_1_pos['offset'], note_1_pos['flow'])
     note_2_pos = note_position[note_2]
     state2 = State(note_2_pos['r'], note_2_pos['theta'], note_2_pos['offset'], note_2_pos['flow'])
+    if note_1_pos['r'] == note_2_pos['r'] and note_1_pos['theta'] == note_2_pos['theta'] and note_1_pos['offset'] == note_2_pos['offset']:
+        return 0
     x_points, z_points, alpha_points, d = get_route_positions(*state1.cart_coords(), *state2.cart_coords(), divisions=100, plot=False)
     return d[-1]
 
@@ -58,7 +60,7 @@ def change_speed(path, scale, new_path, notes_only=False):
 
     with open(path) as json_file:
         input_score = json.load(json_file)
-    
+
     init_pos = input_score['init_pos']
     fingers = input_score['fingers']
     phrase = input_score['phrase']
@@ -69,8 +71,8 @@ def change_speed(path, scale, new_path, notes_only=False):
 
     for i in fingers:
         i['time'] = i['time']*scale
-        i["acceleration"] = MAX_ACC
-        i["deceleration"] = MAX_ACC
+        # i["acceleration"] = MAX_ACC
+        # i["deceleration"] = MAX_ACC
     if not notes_only:
         for i in phrase:
             i['time'] = i['time']*scale
@@ -126,7 +128,7 @@ def generate_states_from_notes(path, new_path, acc=100, selection=[], min_time_c
 
     if len(selection) == 0:
         selection = [True for i in fingers]
-    
+
     t_acumul = 0
     last_ref = None
     for act in range(len(fingers)):
@@ -137,8 +139,8 @@ def generate_states_from_notes(path, new_path, acc=100, selection=[], min_time_c
             init_pos['theta'] = note_position[note]['theta']
             init_pos['offset'] = note_position[note]['offset']
             phrase.append({
-                "acceleration": MAX_ACC,
-                "deceleration": MAX_ACC,
+                "acceleration": acc,
+                "deceleration": acc,
                 "deformation": 0,
                 "flow": note_position[note]['flow'],
                 "jerk": 0,
@@ -154,15 +156,15 @@ def generate_states_from_notes(path, new_path, acc=100, selection=[], min_time_c
             t_acumul += t-0.1
             last_ref = note
         else:
-            if not selection[act]:
+            if not selection[act] or dist_notas(last_ref, note) == 0:
                 t_acumul += t
             else:
                 t_min = min_time(last_ref, note, acc)
                 t_change = max(t_min, min_time_change)
                 if t_acumul > t_change:
                     phrase.append({
-                        "acceleration": MAX_ACC,
-                        "deceleration": MAX_ACC,
+                        "acceleration": acc,
+                        "deceleration": acc,
                         "deformation": 0,
                         "flow": note_position[last_ref]['flow'],
                         "jerk": 0,
@@ -176,8 +178,8 @@ def generate_states_from_notes(path, new_path, acc=100, selection=[], min_time_c
                         "vibrato_freq": 0
                     })
                     phrase.append({
-                        "acceleration": MAX_ACC,
-                        "deceleration": MAX_ACC,
+                        "acceleration": acc,
+                        "deceleration": acc,
                         "deformation": 0,
                         "flow": note_position[note]['flow'],
                         "jerk": 0,
@@ -197,8 +199,8 @@ def generate_states_from_notes(path, new_path, acc=100, selection=[], min_time_c
                 last_ref = note
     if t_acumul:
         phrase.append({
-            "acceleration": MAX_ACC,
-            "deceleration": MAX_ACC,
+            "acceleration": acc,
+            "deceleration": acc,
             "deformation": 0,
             "flow": note_position[last_ref]['flow'],
             "jerk": 0,
@@ -211,7 +213,6 @@ def generate_states_from_notes(path, new_path, acc=100, selection=[], min_time_c
             "vibrato_amp": 0,
             "vibrato_freq": 0
         })
-    
     data = {'init_pos': init_pos, 'phrase': phrase, 'fingers': fingers, 'timestamp': datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
     with open(new_path, 'w') as file:
         json.dump(data, file, indent=4, sort_keys=True)
