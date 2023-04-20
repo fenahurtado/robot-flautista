@@ -412,6 +412,7 @@ class EtherNetIP(object):
         self.ip = ip
 
     def registerAssembly(self, iotype, size, inst, conn):
+        self.pipe_to_udp_process.send(["registerAssembly", iotype, size, inst, conn])
         if inst in self.assembly[conn]:
             print("Reg assembly failed for iotype=", iotype)
             return None
@@ -449,6 +450,24 @@ class EtherNetIP(object):
                     self.explicit.append(message[1])
                     self.assembly[message[1]] = {}
                     print(self.assembly)
+                if message[0] == "registerAssembly":
+                    iotype = message[1]
+                    size = message[2]
+                    inst = message[3]
+                    conn = message[4]
+                    print(self.assembly, conn)
+                    if inst in self.assembly[conn]:
+                        print("Reg assembly failed for iotype=", iotype)
+                        return None
+                    bits = []
+                    for i in range(size * 8):
+                        bits.append(0)
+                    self.assembly[conn][inst] = (conn, iotype, bits)
+                    if conn is not None:
+                        if iotype == EtherNetIP.ENIP_IO_TYPE_INPUT:
+                            conn.mapIn(bits)
+                        elif iotype == EtherNetIP.ENIP_IO_TYPE_OUTPUT:
+                            conn.mapOut(bits)
 
             inp, out, err = select.select([self.udpsock], [], [], 2)
             if len(inp) != 0:
@@ -465,7 +484,7 @@ class EtherNetIP(object):
                 pkt = UdpRecvDataPacket(buf)
 
                 for con in self.assembly:
-                    print(con)
+                    print(self.assembly[con])
                     for inst in self.assembly[con]:
                         conn = self.assembly[con][inst][0]
                         iotype = self.assembly[con][inst][1]
@@ -480,6 +499,13 @@ class EtherNetIP(object):
                                     else:
                                         bits[i] = False
                                     i += 1
+                        words = []
+                        for w in range(10):
+                            words.append(int("".join(["1" if bits[i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
+                        b = bytearray(10)
+                        struct.pack_into('10B', b, 0, *words)
+                        [g, s, ap] = struct.unpack('<HIf', b)
+                        print(g, s, ap)
 
     def explicit_conn(self, ipaddr=None):
         if ipaddr is None:
@@ -488,6 +514,7 @@ class EtherNetIP(object):
         self.pipe_to_udp_process.send(['explicit_conn', exp])
         self.explicit.append(exp)
         self.assembly[exp] = {}
+        print("assembly", exp)
         return exp
 
     def listIDUDP(self, ipaddr=None, timeout=5):
@@ -778,123 +805,127 @@ class EtherNetIPExpConnection(EtherNetIPSession):
                        priority=ForwardOpenReq.FORWARD_OPEN_CONN_PRIO_SCHEDULED,
                        direction=ForwardOpenReq.FORWARD_OPEN_TRANSPORT_DIRECTION_CLIENT,
                        trigger=ForwardOpenReq.FORWARD_OPEN_TRANSPORT_TRIGGER_CYCLIC,
-                       transport_class=ForwardOpenReq.FORWARD_OPEN_TRANSPORT_CLASS_1):
-        rand = random.randint(1, 0xffff) + 0xE4190000
-        torpi *= 1000
-        otrpi *= 1000
-        if inputsz is None:
-            if self.inAssem is not None:
-                inputsz = len(self.inAssem) / 8
-            else:
-                inputsz = 8
-        if outputsz is None:
-            if self.outAssem is not None:
-                outputsz = len(self.outAssem) / 8
-            else:
-                outputsz = 8
-        outputsz += 6  # seq num and run/idle header
-        inputsz += 2   # seq num
-        if multicast is False:
-            mcast = 2  # p2p
+                       transport_class=ForwardOpenReq.FORWARD_OPEN_TRANSPORT_CLASS_1, real=False):
+        if not real:
+            self.a_mandar = [inputinst, outputinst, configinst, multiplier, torpi, otrpi, multicast, inputsz, outputsz, fwdo, configData, keyring_vendor, keyring_devicetype, keyring_productcode, keyring_major, keyring_minor, keyring_compat, path_class, fixed_connection_size, priority, direction, trigger, transport_class]
         else:
-            mcast = 1
-        if fixed_connection_size is True:
-            fixed = 0
-        else:
-            fixed = 1  # variable connection size
+            print(1)
+            rand = random.randint(1, 0xffff) + 0xE4190000
+            torpi *= 1000
+            otrpi *= 1000
+            if inputsz is None:
+                if self.inAssem is not None:
+                    inputsz = len(self.inAssem) / 8
+                else:
+                    inputsz = 8
+            if outputsz is None:
+                if self.outAssem is not None:
+                    outputsz = len(self.outAssem) / 8
+                else:
+                    outputsz = 8
+            outputsz += 6  # seq num and run/idle header
+            inputsz += 2   # seq num
+            if multicast is False:
+                mcast = 2  # p2p
+            else:
+                mcast = 1
+            if fixed_connection_size is True:
+                fixed = 0
+            else:
+                fixed = 1  # variable connection size
 
-        type_trigger = (transport_class | direction << ForwardOpenReq.FORWARD_OPEN_TRANSPORT_DIRECTION_BIT
-                        | trigger << ForwardOpenReq.FORWARD_OPEN_TRANSPORT_TRIGGER_BIT)
+            type_trigger = (transport_class | direction << ForwardOpenReq.FORWARD_OPEN_TRANSPORT_DIRECTION_BIT
+                            | trigger << ForwardOpenReq.FORWARD_OPEN_TRANSPORT_TRIGGER_BIT)
 
-        keyring_maj = keyring_major & 0x7F
-        if keyring_compat:
-            keyring_maj += 128  # set compatibility flag
-        path = (struct.pack(">H", 0x3404)
-                + struct.pack("H", keyring_vendor)
-                + struct.pack("HH", keyring_devicetype, keyring_productcode)
-                + struct.pack(">BB", keyring_maj, keyring_minor))
-        if path_class is not None:
-            path += struct.pack(">BB", 0x20, path_class)
-        if configinst is not None:
-            path += struct.pack("B", 0x24) + struct.pack("B", configinst)
-        if outputinst is not None:
-            path += struct.pack("B", 0x2c) + struct.pack("B", outputinst)
-        if inputinst is not None:
-            path += struct.pack("B", 0x2c) + struct.pack("B", inputinst)
-        plen = int(len(path) / 2)
-        if configData is not None:
-            # 0x80 = simple data segment, with length in words => max 512 bytes of data
-            if len(configData) > 512:
-                return 1
-            path += struct.pack("BB", 0x80, int(len(configData) / 2))
-            path += configData
+            keyring_maj = keyring_major & 0x7F
+            if keyring_compat:
+                keyring_maj += 128  # set compatibility flag
+            path = (struct.pack(">H", 0x3404)
+                    + struct.pack("H", keyring_vendor)
+                    + struct.pack("HH", keyring_devicetype, keyring_productcode)
+                    + struct.pack(">BB", keyring_maj, keyring_minor))
+            if path_class is not None:
+                path += struct.pack(">BB", 0x20, path_class)
+            if configinst is not None:
+                path += struct.pack("B", 0x24) + struct.pack("B", configinst)
+            if outputinst is not None:
+                path += struct.pack("B", 0x2c) + struct.pack("B", outputinst)
+            if inputinst is not None:
+                path += struct.pack("B", 0x2c) + struct.pack("B", inputinst)
             plen = int(len(path) / 2)
-        if fwdo is None:
-            self.conn_serial_num += 1
-            fwdo = ForwardOpenReq(otconnid=rand, toconnid=rand - 1,
-                                  conn_serial=self.conn_serial_num,
-                                  multiplier=multiplier,
-                                  mkpath=self.mkReqPath(clas=0x06, inst=0x01, attr=None),
-                                  torpi=torpi,
-                                  otrpi=otrpi,
-                                  toparams=(int(inputsz)
-                                            | (priority << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_PRIORITY)
-                                            | (fixed << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_FIXED_VAR)
-                                            | (mcast << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_CONN_TYPE)),
-                                  otparams=(int(outputsz)
-                                            | (priority << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_PRIORITY)
-                                            | (fixed << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_FIXED_VAR)
-                                            | (0x2 << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_CONN_TYPE)),
-                                  type_trigger=type_trigger,
-                                  plen=plen,
-                                  data=path)
-        # add service field
-        dsz = len(fwdo) + 1
-        cpf2 = UnconnectedDataItem(type_id=CommandSpecificData.TYPE_ID_UNCONNECTED_MESSAGE,
-                                   length=dsz, data=fwdo,
-                                   service=(CI_SRV_FORWARD_OPEN | UnconnectedDataItem.UNCONN_DATA_ITEM_SERVICE_REQUEST))
-        cpf = CommandSpecificData(type_id=CommandSpecificData.TYPE_ID_NULL,
-                                  item_count=2, length=0, data=cpf2)
-        srr = SendRRPacket(interface_handle=0, timeout=0, data=cpf)
-        pkt = EncapsulationPacket(command=EncapsulationPacket.ENCAP_CMD_SENDRRDATA,
-                                  length=len(srr), session=self.session,
-                                  sender_context=random.randint(1, 4026531839).to_bytes(8, byteorder='big'),
-                                  data=srr)
-        self.sock.send(pkt.pack())
-        inp, out, err = select.select([self.sock], [], [], 10)
-        if len(inp) != 0:
-            data = self.sock.recv(1024)
-            pkt = EncapsulationPacket()
-            pkt.unpack(data)
-            if pkt.status == EncapsulationPacket.ENCAP_STATUS_SUCCESS \
-               and pkt.command == EncapsulationPacket.ENCAP_CMD_SENDRRDATA:
-                srr = SendRRPacket(pkt.data)
-                csd = CommandSpecificData(srr.data)
-                udi = UnconnectedDataItem(csd.data)
-                if udi.data[1] == 0:  # Forward Open Status
-                    fworsp = ForwardOpenResp(udi.data)
-                    if csd.item_count > 2:
-                        # socket address info O->T
-                        ucdih = UnconnectedDataItemHdr(fworsp.data)
-                        otaddrinfo = SocketAddressInfo(ucdih.data)
-                        if b'' != otaddrinfo.data:
-                            ucdih2 = UnconnectedDataItemHdr(otaddrinfo.data)
-                            # toaddrinfo = SocketAddressInfo(ucdih2.data)
-                            SocketAddressInfo(ucdih2.data)
-                    self.otconnid = fworsp.otconnid
-                    self.toconnid = fworsp.toconnid
-                    self.otapi = fworsp.otapi / 1000
-                    if self.otapi < 8:
-                        self.otapi = 8
-                    self.toapi = fworsp.toapi / 1000
-                    if self.toapi < 8:
-                        self.toapi = 8
-                    return 0
-                elif udi.data[1] == 0x01:  # Forward open failed with Connection Failure
-                    if udi.data[2] > 0:
-                        extended_status, = struct.unpack("H", udi.data[3:5])
-                        return extended_status
-        return None
+            if configData is not None:
+                # 0x80 = simple data segment, with length in words => max 512 bytes of data
+                if len(configData) > 512:
+                    return 1
+                path += struct.pack("BB", 0x80, int(len(configData) / 2))
+                path += configData
+                plen = int(len(path) / 2)
+            if fwdo is None:
+                self.conn_serial_num += 1
+                fwdo = ForwardOpenReq(otconnid=rand, toconnid=rand - 1,
+                                    conn_serial=self.conn_serial_num,
+                                    multiplier=multiplier,
+                                    mkpath=self.mkReqPath(clas=0x06, inst=0x01, attr=None),
+                                    torpi=torpi,
+                                    otrpi=otrpi,
+                                    toparams=(int(inputsz)
+                                                | (priority << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_PRIORITY)
+                                                | (fixed << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_FIXED_VAR)
+                                                | (mcast << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_CONN_TYPE)),
+                                    otparams=(int(outputsz)
+                                                | (priority << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_PRIORITY)
+                                                | (fixed << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_FIXED_VAR)
+                                                | (0x2 << ForwardOpenReq.FORWARD_OPEN_CONN_PARAM_BIT_CONN_TYPE)),
+                                    type_trigger=type_trigger,
+                                    plen=plen,
+                                    data=path)
+            # add service field
+            dsz = len(fwdo) + 1
+            cpf2 = UnconnectedDataItem(type_id=CommandSpecificData.TYPE_ID_UNCONNECTED_MESSAGE,
+                                    length=dsz, data=fwdo,
+                                    service=(CI_SRV_FORWARD_OPEN | UnconnectedDataItem.UNCONN_DATA_ITEM_SERVICE_REQUEST))
+            cpf = CommandSpecificData(type_id=CommandSpecificData.TYPE_ID_NULL,
+                                    item_count=2, length=0, data=cpf2)
+            srr = SendRRPacket(interface_handle=0, timeout=0, data=cpf)
+            pkt = EncapsulationPacket(command=EncapsulationPacket.ENCAP_CMD_SENDRRDATA,
+                                    length=len(srr), session=self.session,
+                                    sender_context=random.randint(1, 4026531839).to_bytes(8, byteorder='big'),
+                                    data=srr)
+            self.sock.send(pkt.pack())
+            inp, out, err = select.select([self.sock], [], [], 10)
+            if len(inp) != 0:
+                data = self.sock.recv(1024)
+                pkt = EncapsulationPacket()
+                pkt.unpack(data)
+                if pkt.status == EncapsulationPacket.ENCAP_STATUS_SUCCESS \
+                and pkt.command == EncapsulationPacket.ENCAP_CMD_SENDRRDATA:
+                    srr = SendRRPacket(pkt.data)
+                    csd = CommandSpecificData(srr.data)
+                    udi = UnconnectedDataItem(csd.data)
+                    if udi.data[1] == 0:  # Forward Open Status
+                        fworsp = ForwardOpenResp(udi.data)
+                        if csd.item_count > 2:
+                            # socket address info O->T
+                            ucdih = UnconnectedDataItemHdr(fworsp.data)
+                            otaddrinfo = SocketAddressInfo(ucdih.data)
+                            if b'' != otaddrinfo.data:
+                                ucdih2 = UnconnectedDataItemHdr(otaddrinfo.data)
+                                # toaddrinfo = SocketAddressInfo(ucdih2.data)
+                                SocketAddressInfo(ucdih2.data)
+                        self.otconnid = fworsp.otconnid
+                        self.toconnid = fworsp.toconnid
+                        self.otapi = fworsp.otapi / 1000
+                        if self.otapi < 8:
+                            self.otapi = 8
+                        self.toapi = fworsp.toapi / 1000
+                        if self.toapi < 8:
+                            self.toapi = 8
+                        return 0
+                    elif udi.data[1] == 0x01:  # Forward open failed with Connection Failure
+                        if udi.data[2] > 0:
+                            extended_status, = struct.unpack("H", udi.data[3:5])
+                            return extended_status
+            return None
 
     def sendFwdCloseReq(self, inputinst, outputinst, configinst, path_class=0x04, connection_serialno=None):
         path = struct.pack(">BBB", 0x20, path_class, 0x24) + struct.pack("B", configinst)
@@ -970,14 +1001,32 @@ class EtherNetIPExpConnection(EtherNetIPSession):
             self.sendUdpIO()
             time.sleep(self.otapi / 1000)
             if pipe.poll():
-                print(pipe.recv())
+                message = pipe.recv()
+                print("Message received", message[0])
+                if message[0] == "stopProduce":
+                    if self.prod_state == 1:
+                        self.prod_state = 0
+                elif message[0] == "sendFwdOpenReq":
+                    self.sendFwdOpenReq(message[1], message[2], message[3], multiplier=message[4],   # noqa:C901
+                       torpi=message[5], otrpi=message[6], multicast=message[7], inputsz=message[8],
+                       outputsz=message[9], fwdo=message[10], configData=message[11],
+                       keyring_vendor=message[12], keyring_devicetype=message[13], keyring_productcode=message[14],
+                       keyring_major=message[15], keyring_minor=message[16], keyring_compat=message[17],
+                       path_class=message[18], fixed_connection_size=message[19],
+                       priority=message[20],
+                       direction=message[21],
+                       trigger=message[22],
+                       transport_class=message[23], real=True)
 
     def produce(self):
         if self.prod_state == 0:
-            self.prod_thread = EthernetIOThread(2, None, self)
+            self.pipe_to_prod_thread, prod_thread_pipe = Pipe()
+            self.prod_thread = EthernetIOThread(2, None, self, pipe=prod_thread_pipe)
             self.prod_state = 1
             self.prod_thread.start()
+            self.pipe_to_prod_thread.send(["sendFwdOpenReq", *self.a_mandar])
 
     def stopProduce(self):
+        self.pipe_to_prod_thread.send(["stopProduce"])
         if self.prod_state == 1:
             self.prod_state = 0

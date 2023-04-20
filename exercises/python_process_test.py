@@ -1,4 +1,5 @@
 import sys
+import struct
 sys.path.insert(0, 'C:/Users/ferna/Dropbox/UC/Magister/robot-flautista')
 import lib.ethernet_ip.ethernetip as ethernetip
 
@@ -16,7 +17,7 @@ if __name__ == "__main__":
     print("EIP started...")
 
     C1 = EIP.explicit_conn(hostname)
-    C1.inAssem = [0 for i in range(4*8)]
+    #C1.inAssem = [0 for i in range(4*8)]
     print("Explicit connection created...")
 
     pkt = C1.listID()
@@ -33,10 +34,19 @@ if __name__ == "__main__":
     EIP.registerAssembly(ethernetip.EtherNetIP.ENIP_IO_TYPE_INPUT, inputsize, 101, C1)
     EIP.registerAssembly(ethernetip.EtherNetIP.ENIP_IO_TYPE_OUTPUT, outputsize, 100, C1)
 
+    C1.registerSession()
+            
+    C1.sendFwdOpenReq(101, 100, 0x6e, torpi=50, otrpi=50)#, priority=ethernetip.ForwardOpenReq.FORWARD_OPEN_CONN_PRIO_HIGH)
+    C1.produce()
+        
     print("Assembly registered...")
     while True:
         if input() == "q":
             break
+    
     print("Closing...")
+    C1.stopProduce()
+    C1.sendFwdCloseReq(101, 100, 0x6e)
+
     EIP.stopIO()
     print("Closed.")
