@@ -57,7 +57,7 @@ class Window(QMainWindow, Ui_MainWindow):
     '''
     Esta clase conecta los elementos de la GUI principal con todas las funciones que se quieren realizar con el robot.
     '''
-    def __init__(self, app, running, musician, parent=None):
+    def __init__(self, app, running, musician_pipe, data, parent=None):
         super().__init__(parent)
         self.setupUi(self)
         self.app = app
@@ -87,8 +87,10 @@ class Window(QMainWindow, Ui_MainWindow):
         # self.desired_state.homed()
 
         self.running = running
-        self.musician = musician
-        self.memory = musician.memory
+        self.musician_pipe = musician_pipe
+
+        # self.musician_pipe.send(["get_memory_data"])
+        self.data = data
         # self.preasure_sensor_event = preasure_sensor_event
         # #self.preasure_sensor = self.musician.preasure_sensor
         # self.flow_controler_event = flow_controler_event
@@ -112,7 +114,7 @@ class Window(QMainWindow, Ui_MainWindow):
         #self.player.motors_control.write_at_home()
         self.scrolled = 0
 
-        self.moveBox = ManualMoveCollapsibleBox("Manual Move", musician, parent=self)
+        self.moveBox = ManualMoveCollapsibleBox("Manual Move", musician_pipe, parent=self)
         self.moveBox.stopButton.clicked.connect(self.stop_motors)
         self.gridLayout.addWidget(self.moveBox, 3, 0, 1, 8)
 
@@ -225,17 +227,17 @@ class Window(QMainWindow, Ui_MainWindow):
         # self.musician.begin_finger_action.connect(self.change_playing_fingers_act)
 
     def reset_x_controller(self):
-        self.musician.reset_x_controller()
+        self.musician_pipe.send(["reset_x_controller"])
 
     def reset_z_controller(self):
-        self.musician.reset_z_controller()
+        self.musician_pipe.send(["reset_z_controller"])
 
     def reset_alpha_controller(self):
-        self.musician.reset_alpha_controller()
-        self.autohome_Alpha_routine()
+        self.musician_pipe.send(["reset_alpha_controller"])
+        #self.autohome_Alpha_routine()
 
     def start_loaded_script(self):
-        self.musician.start_loaded_script()
+        self.musician_pipe.send(["start_loaded_script"])
 
     # def open_x_driver_tool(self):
     #     '''
@@ -278,7 +280,7 @@ class Window(QMainWindow, Ui_MainWindow):
         '''
         r = self.save()
         if r:
-            self.musician.execute_score(self.filename)
+            self.musician_pipe.send(["execute_score", self.filename])
             # measure = ['X','X_ref']
             # win = PlayingWindow(self.app, measure, self.musician, parent=self, independ=False)
             # win.show()
@@ -319,8 +321,8 @@ class Window(QMainWindow, Ui_MainWindow):
         Esta función se usa para detener una partitura que se esté ejecutando
         '''
         #print('Stop clicked')
-        self.memory.stop_recording()
-        self.musician.stop()
+        #self.memory.stop_recording()
+        self.musician_pipe.send(["stop"])
         # self.musician.playing.clear()
         self.startButton.hide()
         self.stopButton.hide()
@@ -344,7 +346,9 @@ class Window(QMainWindow, Ui_MainWindow):
         #     QApplication.processEvents()
         # while self.musician.moving():
         #     pass
-        state = self.musician.get_ref_state()
+        self.musician_pipe.send(['get_ref_state'])
+        state = self.musician_pipe.recv()[0]
+        #state = self.musician.get_ref_state()
         self.moveBox.set_values(state)
 
         msg = QMessageBox()
@@ -370,7 +374,8 @@ class Window(QMainWindow, Ui_MainWindow):
         if fname2[-4:] != '.wav':
             fname2 += '.wav'
         self.last_path = os.path.split(fname2)[0]
-        self.memory.save_recorded_data(fname, fname2)
+        self.musician_pipe.send(["memory.save_recorded_data", fname, fname2])
+        #self.memory.save_recorded_data(fname, fname2)
 
     def change_playing_initial_position(self):
         '''
@@ -622,22 +627,27 @@ class Window(QMainWindow, Ui_MainWindow):
         if dlg.exec():
             DATA['FlowVar'] = data[0]
             var_traduction = {0: 'M', 1: 'V', 2: 'P'}
-            self.musician.flow_driver.change_controlled_var(var_traduction[data[0]])
+            self.musician_pipe.send(["flow_driver.change_controlled_var", var_traduction[data[0]]])
+            #self.musician.flow_driver.change_controlled_var(var_traduction[data[0]])
             DATA['FlowLoop'] = data[1]
-            self.musician.flow_driver.change_control_loop(data[1])
+            #self.musician.flow_driver.change_control_loop(data[1])
+            self.musician_pipe.send(["flow_driver.change_control_loop", data[1]])
             DATA['kp'] = data[2]
-            self.musician.flow_driver.change_kp(data[2])
+            #self.musician.flow_driver.change_kp(data[2])
+            self.musician_pipe.send(["flow_driver.change_kp", data[2]])
             DATA['ki'] = data[3]
-            self.musician.flow_driver.change_ki(data[3])
+            #self.musician.flow_driver.change_ki(data[3])
+            self.musician_pipe.send(["flow_driver.change_ki", data[3]])
             DATA['kd'] = data[4]
-            self.musician.flow_driver.change_kd(data[4])
+            #self.musician.flow_driver.change_kd(data[4])
+            self.musician_pipe.send(["flow_driver.change_kd", data[4]])
             save_variables()
 
     def plot_measure(self, measure, title):
         '''
         Se usa esta función para desplegar una ventana con el gráfico de alguna variable de interés
         '''
-        plotwin = PlotWindow(self.app, measure, self.memory, parent=self)
+        plotwin = PlotWindow(self.app, measure, self.data, parent=self)
         plotwin.setWindowTitle(title)
         plotwin.show()
 
@@ -740,19 +750,19 @@ class Window(QMainWindow, Ui_MainWindow):
     # def autohome_Z_routine(self):
     #     self.musician.auto_home(x=False, alpha=False)
 
-    def autohome_Alpha_routine(self):
-        data=[0]
-        #self.alpha_driver.request_write_reset_errors()
-        self.autohomeDlg = CalibrateAngleForm(parent=self, data=data)
-        self.autohomeDlg.angleSpinBox.valueChanged.connect(self.change_motor_angle)
-        self.autohomeDlg.setWindowTitle("Choose parameters")
-        #self.musician.motors_controller.home_alpha()
-        if self.autohomeDlg.exec():
-            pass
+    # def autohome_Alpha_routine(self):
+    #     data=[0]
+    #     #self.alpha_driver.request_write_reset_errors()
+    #     self.autohomeDlg = CalibrateAngleForm(parent=self, data=data)
+    #     self.autohomeDlg.angleSpinBox.valueChanged.connect(self.change_motor_angle)
+    #     self.autohomeDlg.setWindowTitle("Choose parameters")
+    #     #self.musician.motors_controller.home_alpha()
+    #     if self.autohomeDlg.exec():
+    #         pass
         
-        self.musician.alpha_driver.homing_event.clear()
-        state = self.musician.get_ref_state()
-        self.moveBox.set_values(state)
+    #     self.musician.alpha_driver.homing_event.clear()
+    #     state = self.musician.get_ref_state()
+    #     self.moveBox.set_values(state)
 
     def score_generate_states(self, b=False, selection=[], min_time=0):
         #print(selection)
@@ -984,15 +994,16 @@ class Window(QMainWindow, Ui_MainWindow):
         update_note_position()
         self.moveBox.collapsible_update_note_position()
 
-    def change_motor_angle(self, value):
-        '''
-        Esta función se usa para el homing del eje alpha, conecta los valores que se introducen en el spinbox con el driver del motor.
-        '''
-        self.musician.move_to_alpha(value)
+    # def change_motor_angle(self, value):
+    #     '''
+    #     Esta función se usa para el homing del eje alpha, conecta los valores que se introducen en el spinbox con el driver del motor.
+    #     '''
+    #     self.musician.move_to_alpha(value)
 
     def stop_motors(self):
-        self.musician.stop()
-        state = self.musician.get_ref_state()
+        self.musician_pipe.send(["stop"])
+        self.musician_pipe.send(['get_ref_state'])
+        state = self.musician_pipe.recv()[0]
         self.moveBox.set_values(state)
      
     def change_flute_position(self):
@@ -1029,7 +1040,8 @@ class Window(QMainWindow, Ui_MainWindow):
         Con esta función se agrega una acción de posicionamiento inicial.
         '''
         if not data:
-            state = self.musician.get_ref_state()
+            self.musician_pipe.send(['get_ref_state'])
+            state = self.musician_pipe.recv()[0]
             data={'type': 0, 'r': state.r, 'theta': state.theta,'offset': state.o}
         if dialog:
             dlg = StartActionForm(parent=self, data=data)
@@ -1201,7 +1213,7 @@ class Window(QMainWindow, Ui_MainWindow):
         Esta función provoca un cambio de instrumento en el driver de dedos del músico
         """
         self.instrument = self.instrument_dialog.comboBox.itemText(value).lower()
-        self.musician.set_instrument(self.instrument_dialog.comboBox.itemText(value).lower())
+        self.musician_pipe.send['set_instrument', self.instrument_dialog.comboBox.itemText(value).lower()]
 
 
 if __name__ == "__main__":

@@ -96,11 +96,12 @@ instrument_dicts = {'flute': flute_dict,
 
 class FingersDriver(QtCore.QThread):
 
-    def __init__(self, host, running, connected=True, instrument='flute', verbose=False):
+    def __init__(self, host, running, pipe_end, connected=True, instrument='flute', verbose=False):
 
         # Variables de threading
         QtCore.QThread.__init__(self)
         self.running = running
+        self.pipe_end = pipe_end
         self.connected = connected
         self.verbose = verbose
         

@@ -1,25 +1,35 @@
 import sys
 from PyQt5.QtWidgets import QApplication
-import threading
+#import threading
+from multiprocessing import Process, Event, Value, Pipe, Manager
 from time import time
 from exercises.main_window import Window
 from exercises.drivers_connect import Musician
+from numpy import linspace
 
-app = QApplication(sys.argv)
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
 
-host = "192.168.2.10"
-connections = ["192.168.2.102", "192.168.2.104", "192.168.2.103", "192.168.2.101", "192.168.2.100"]
-event = threading.Event()
-event.set()
+    host = "192.168.2.10"
+    connections = ["192.168.2.102", "192.168.2.104", "192.168.2.103", "192.168.2.101", "192.168.2.100"]
+    event = Event()
+    event.set()
 
-t0 = time()
-pierre = Musician(host, connections, event, fingers_connect=False, x_connect=False, z_connect=False, alpha_connect=False, flow_connect=False, preasure_sensor_connect=False)
-pierre.start()
+    mgr = Manager()
+    data = mgr.dict()
+    
 
-win = Window(app, event, pierre)
-win.show()
+    t0 = time()
+    pipe2pierre, pierre_pipe = Pipe()
+    pierre = Musician(host, connections, event, pierre_pipe, data, fingers_connect=False, x_connect=False, z_connect=False, alpha_connect=False, flow_connect=False, preasure_sensor_connect=True, mic_connect=True)
+    pierre.start()
 
-sys.exit(app.exec())
+    pipe2pierre.recv()
+
+    win = Window(app, event, pipe2pierre, data)
+    win.show()
+
+    sys.exit(app.exec())
 
 
 # import sys

@@ -29,6 +29,23 @@ class Window(QMainWindow, PlotWindow, QtCore.QThread):
                     self.traces.append(self.menuAdd_Trace.addAction(signals[i]))
                     self.traces[-1].triggered.connect(partial(self.add_trace, i))
         self.data = data
+        # self.times = data['times'] 
+        # self.radius = data['radius'] 
+        # self.theta = data['theta'] 
+        # self.offset = data['offset'] 
+        # self.x_val = data['x'] 
+        # self.z = data['z'] 
+        # self.alpha = data['alpha'] 
+        # self.mouth_pressure = data['mouth_pressure'] 
+        # self.mass_flow = data['mass_flow'] 
+        # self.flow_ref = data['flow_ref'] 
+        # self.volume_flow = data['volume_flow'] 
+        # self.temperature = data['temperature'] 
+        # self.frequency = data['frequency'] 
+        # self.x_ref = data['x_ref'] 
+        # self.z_ref = data['z_ref'] 
+        # self.alpha_ref = data['alpha_ref']
+
 
         #self.ptr = -self.windowWidth                      # set first x position
         self.curves = []
@@ -54,33 +71,33 @@ class Window(QMainWindow, PlotWindow, QtCore.QThread):
     def update(self):
         for index in range(len(self.measures)):
             if self.measures[index] == 0: # Radius
-                self.curves[index].setData(self.data.times, self.data.radius)
+                self.curves[index].setData(self.data['times'], self.data['radius'])
             elif self.measures[index] == 1: # Theta
-                self.curves[index].setData(self.data.times, self.data.theta)
+                self.curves[index].setData(self.data['times'], self.data['theta'])
             elif self.measures[index] == 2: # Offset
-                self.curves[index].setData(self.data.times, self.data.offset)
+                self.curves[index].setData(self.data['times'], self.data['offset'])
             elif self.measures[index] == 3: # Position
-                self.curves[index].setData(self.data.x, self.data.z)
+                self.curves[index].setData(self.data['x'], self.data['z'])
             elif self.measures[index] == 4: # Mouth Pressure
-                self.curves[index].setData(self.data.times, self.data.mouth_pressure)
+                self.curves[index].setData(self.data['times'], self.data['mouth_pressure'])
             elif self.measures[index] == 5: # Mass Flow
-                self.curves[index].setData(self.data.times, self.data.mass_flow)
-                self.ref_curve.setData(self.data.times, self.data.flow_ref)
+                self.curves[index].setData(self.data['times'], self.data['mass_flow'])
+                self.ref_curve.setData(self.data['times'], self.data['flow_ref'])
             elif self.measures[index] == 6: # Volume Flow
-                self.curves[index].setData(self.data.times, self.data.volume_flow)
+                self.curves[index].setData(self.data['times'], self.data['volume_flow'])
             elif self.measures[index] == 7: # Temperature
-                self.curves[index].setData(self.data.times, self.data.temperature)
+                self.curves[index].setData(self.data['times'], self.data['temperature'])
             elif self.measures[index] == 8: # Frequency
-                self.curves[index].setData(self.data.times, self.data.frequency)
+                self.curves[index].setData(self.data['times'], self.data['frequency'])
             elif self.measures[index] == 9: # X
-                self.curves[index].setData(self.data.times, self.data.x)
-                self.ref_curve.setData(self.data.times, self.data.x_ref)
+                self.curves[index].setData(self.data['times'], self.data['x'])
+                self.ref_curve.setData(self.data['times'], self.data['x_ref'])
             elif self.measures[index] == 10: # Z
-                self.curves[index].setData(self.data.times, self.data.z)
-                self.ref_curve.setData(self.data.times, self.data.z_ref)
+                self.curves[index].setData(self.data['times'], self.data['z'])
+                self.ref_curve.setData(self.data['times'], self.data['z_ref'])
             elif self.measures[index] == 11: # Alpha
-                self.curves[index].setData(self.data.times, self.data.alpha)
-                self.ref_curve.setData(self.data.times, self.data.alpha_ref)
+                self.curves[index].setData(self.data['times'], self.data['alpha'])
+                self.ref_curve.setData(self.data['times'], self.data['alpha_ref'])
             
         self.app.processEvents()
 

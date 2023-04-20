@@ -24,7 +24,7 @@ import random
 import select
 import socket
 import struct
-import threading
+from multiprocessing import Process, Value, Pipe
 
 import dpkt
 
@@ -383,18 +383,20 @@ class UdpRecvDataPacket(dpkt.Packet):
                ('unknown', 'H', 0))  # TODO check for what the first two bytes of data are
 
 
-class EthernetIOThread(threading.Thread):
-    def __init__(self, typ, enip=None, conn=None):
+class EthernetIOThread(Process):
+    def __init__(self, typ, enip=None, conn=None, pipe=None):
+        #print("Hola")
         self.typ = typ
         self.enip = enip
         self.conn = conn
-        threading.Thread.__init__(self)
+        self.pipe = pipe
+        Process.__init__(self)
 
     def run(self):
         if self.typ == 1:
-            self.enip.listenUDP()
+            self.enip.listenUDP(self.pipe)
         elif self.typ == 2:
-            self.conn.prodThread()
+            self.conn.prodThread(self.pipe)
 
 
 class EtherNetIP(object):
@@ -406,7 +408,7 @@ class EtherNetIP(object):
         self.explicit  = []
         self.udpsock   = None
         self.udpthread = None
-        self.io_state  = 0
+        self.io_state  = Value("i", 0)
         self.ip = ip
 
     def registerAssembly(self, iotype, size, inst, conn):
@@ -425,20 +427,29 @@ class EtherNetIP(object):
         return bits
 
     def startIO(self):
-        if self.io_state == 0:
+        if self.io_state.value == 0:
             self.udpsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.udpsock.bind(("0.0.0.0", ENIP_UDP_PORT))
-            self.udpthread = EthernetIOThread(1, self)
-            self.io_state = 1
+            self.pipe_to_udp_process, udp_process_pipe = Pipe()
+            self.udpthread = EthernetIOThread(1, self, pipe=udp_process_pipe)
+            self.io_state.value = 1
             self.udpthread.start()
 
     def stopIO(self):
-        if self.io_state == 1:
-            self.io_state = 0
+        if self.io_state.value == 1:
+            self.io_state.value = 0
             self.udpsock.close()
 
-    def listenUDP(self):
-        while 1 == self.io_state:
+    def listenUDP(self, pipe):
+        while 1 == self.io_state.value:
+            if pipe.poll():
+                message = pipe.recv()
+                print("Llego el mensaje", message[0])
+                if message[0] == "explicit_conn":
+                    self.explicit.append(message[1])
+                    self.assembly[message[1]] = {}
+                    print(self.assembly)
+
             inp, out, err = select.select([self.udpsock], [], [], 2)
             if len(inp) != 0:
                 try:
@@ -446,7 +457,7 @@ class EtherNetIP(object):
                 except OSError:
                     # If we close the socket asynchronously, the recv will
                     # fail
-                    if self.io_state == 0:
+                    if self.io_state.value == 0:
                         return
                     raise
 
@@ -454,6 +465,7 @@ class EtherNetIP(object):
                 pkt = UdpRecvDataPacket(buf)
 
                 for con in self.assembly:
+                    print(con)
                     for inst in self.assembly[con]:
                         conn = self.assembly[con][inst][0]
                         iotype = self.assembly[con][inst][1]
@@ -473,6 +485,7 @@ class EtherNetIP(object):
         if ipaddr is None:
             ipaddr = self.ip
         exp = EtherNetIPExpConnection(ipaddr)
+        self.pipe_to_udp_process.send(['explicit_conn', exp])
         self.explicit.append(exp)
         self.assembly[exp] = {}
         return exp
@@ -951,11 +964,13 @@ class EtherNetIPExpConnection(EtherNetIPSession):
         self.seqnum += 1 #(self.seqnum + 1) % 10
         self.prodsock.sendto(pkt.pack(), (self.ipaddr, ENIP_UDP_PORT))
 
-    def prodThread(self):
+    def prodThread(self, pipe):
         import time
         while self.prod_state == 1:
             self.sendUdpIO()
             time.sleep(self.otapi / 1000)
+            if pipe.poll():
+                print(pipe.recv())
 
     def produce(self):
         if self.prod_state == 0:

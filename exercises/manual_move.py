@@ -80,12 +80,13 @@ class CollapsibleBox(QtWidgets.QWidget):
         content_animation.setEndValue(content_height)
 
 class ManualMoveCollapsibleBox(CollapsibleBox):
-    def __init__(self, title="", musician=None, parent=None):
+    def __init__(self, title="", musician_pipe=None, parent=None):
         super(ManualMoveCollapsibleBox, self).__init__(title, parent)
         self.parent = parent
         self.changing_other = False
-        self.musician = musician
-        m_state = musician.get_ref_state()
+        self.musician_pipe = musician_pipe
+        musician_pipe.send(['get_ref_state'])
+        m_state = musician_pipe.recv()[0]
         self.desired_state = State(m_state.r,m_state.theta,m_state.o,m_state.flow)
         self.gridLayout = QtWidgets.QGridLayout()
         self.labelX = QtWidgets.QLabel("X Axis:")
@@ -221,7 +222,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
 
     def change_note(self, value):
         #print(self.comboBoxNote.itemText(value))
-        self.parent.musician.execute_fingers_action(self.comboBoxNote.itemText(value), through_action=False)
+        #self.parent.musician.execute_fingers_action(self.comboBoxNote.itemText(value), through_action=False)
+        self.musician_pipe.send(['execute_fingers_action', self.comboBoxNote.itemText(value), False])
         if self.moving_with_notes:
             pos = self.note_position[self.comboBoxNote.itemText(value)]
             self.desired_state.r = pos['r']
@@ -230,7 +232,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
             self.desired_state.flow = pos['flow']
             self.desired_state.vibrato_amp = 0
             self.desired_state.vibrato_freq = 0
-            self.musician.move_to(self.desired_state)
+            #self.musician.move_to(self.desired_state)
+            self.musician_pipe.send(["move_to", self.desired_state, None, False, False, False, False])
             self.update_values()
 
     def add_notes(self, instrument):
@@ -269,7 +272,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
             #print("x", value)
             self.changing_other = True
             self.desired_state.x = value
-            self.musician.move_to(self.desired_state, only_x=True)
+            #self.musician.move_to(self.desired_state, only_x=True)
+            self.musician_pipe.send(["move_to", self.desired_state, None, True, False, False, False])
             self.update_values()
             #flutist.moveTo(self.state, onlyCartesian=True)
             self.changing_other = False
@@ -280,7 +284,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
             self.changing_other = True
             self.desired_state.z = value
             #print(value, self.state.z)
-            self.musician.move_to(self.desired_state, only_z=True)
+            #self.musician.move_to(self.desired_state, only_z=True)
+            self.musician_pipe.send(["move_to", self.desired_state, None, False, True, False, False])
             self.update_values()
             self.changing_other = False
 
@@ -289,7 +294,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
             #print("alpha", value)
             self.changing_other = True
             self.desired_state.alpha = value
-            self.musician.move_to(self.desired_state, only_alpha=True)
+            #self.musician.move_to(self.desired_state, only_alpha=True)
+            self.musician_pipe.send(["move_to", self.desired_state, None, False, False, True, False])
             self.update_values()
             self.changing_other = False
 
@@ -298,7 +304,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
             #print("r")
             self.changing_other = True
             self.desired_state.r = value
-            self.musician.move_to(self.desired_state)
+            #self.musician.move_to(self.desired_state)
+            self.musician_pipe.send(["move_to", self.desired_state, None, False, False, False, False])
             self.update_values()
             self.changing_other = False
 
@@ -307,7 +314,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
             #print("theta")
             self.changing_other = True
             self.desired_state.theta = value
-            self.musician.move_to(self.desired_state)
+            #self.musician.move_to(self.desired_state)
+            self.musician_pipe.send(["move_to", self.desired_state, None, False, False, False, False])
             self.update_values()
             self.changing_other = False
 
@@ -316,7 +324,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
             #print("o")
             self.changing_other = True
             self.desired_state.o = value
-            self.musician.move_to(self.desired_state)
+            #self.musician.move_to(self.desired_state)
+            self.musician_pipe.send(["move_to", self.desired_state, None, False, False, False, False])
             self.update_values()
             self.changing_other = False
     
@@ -324,7 +333,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
         if not self.changing_other:
             self.changing_other = True
             self.desired_state.flow = value
-            self.musician.move_to(self.desired_state, only_flow=True)
+            #self.musician.move_to(self.desired_state, only_flow=True)
+            self.musician_pipe.send(["move_to", self.desired_state, None, False, False, False, True])
             self.changing_other = False
 
     def change_flow_vibrato(self, value):
@@ -332,7 +342,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
             #print("flow vibrato")
             self.changing_other = True
             self.desired_state.vibrato_freq = value
-            self.musician.move_to(self.desired_state, only_flow=True)
+            #self.musician.move_to(self.desired_state, only_flow=True)
+            self.musician_pipe.send(["move_to", self.desired_state, None, False, False, False, True])
             self.changing_other = False
 
     def change_flow_vibrato_amp(self, value):
@@ -340,7 +351,8 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
             #print("flow vibrato")
             self.changing_other = True
             self.desired_state.vibrato_amp = value
-            self.musician.move_to(self.desired_state, only_flow=True)
+            #self.musician.move_to(self.desired_state, only_flow=True)
+            self.musician_pipe.send(["move_to", self.desired_state, None, False, False, False, True])
             self.changing_other = False
 
     def disableButtons(self):
