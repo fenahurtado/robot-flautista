@@ -13,6 +13,7 @@ sys.path.insert(0, 'C:/Users/ferna/Dropbox/UC/Magister/robot-flautista')
 from multiprocessing import Process, Event, Value, Pipe, Array, Manager
 import lib.ethernet_ip.ethernetip as ethernetip
 from utils.motor_route import *
+from exercises.communication import CommunicationCenter
 #from utils.driver_fingers import FingersDriver
 import struct
 import time
@@ -183,7 +184,7 @@ class VirtualAxis(Process):
                 message = self.pipe_conn.recv()
                 print("Message received in virtual axis:", message[0])
                 if message[0] == "get_ref":
-                    self.get_ref(message[1])
+                    pos, vel = self.get_ref(message[1])
                 elif message[0] == "update_ref":
                     self.update_ref(message[1])
                 elif message[0] == "merge_ref":
@@ -220,13 +221,16 @@ class VirtualAxis(Process):
         self.ref = [(0,self.pos,0)]
 
 class AMCIDriver(Process):
-    def __init__(self, EIP, hostname, running, virtual_axis, pipe_conn, connected=True, disable_anti_resonance_bit=0, enable_stall_detection_bit=0, use_backplane_proximity_bit=0, use_encoder_bit=0, home_to_encoder_z_pulse=0, input_3_function_bits=0, input_2_function_bits=0, input_1_function_bits=0, output_functionality_bit=0, output_state_control_on_network_lost=0, output_state_on_network_lost=0, read_present_configuration=0, save_configuration=0, binary_input_format=0, binary_output_format=0, binary_endian=0, input_3_active_level=0, input_2_active_level=0, input_1_active_level=0, starting_speed=1, motors_step_turn=1000, hybrid_control_gain=1, encoder_pulses_turn=1000, idle_current_percentage=30, motor_current=40, current_loop_gain=5, homing_slow_speed=200, verbose=False, virtual_axis_follow_acceleration=50, virtual_axis_follow_deceleration=50, home=True, virtual_axis_proportional_coef=1, Kp=0, Ki=5, Kd=0.01):
+    def __init__(self, hostname, running, musician_pipe, comm_pipe, comm_data, virtual_axis_pipe, t0, connected=True, disable_anti_resonance_bit=0, enable_stall_detection_bit=0, use_backplane_proximity_bit=0, use_encoder_bit=0, home_to_encoder_z_pulse=0, input_3_function_bits=0, input_2_function_bits=0, input_1_function_bits=0, output_functionality_bit=0, output_state_control_on_network_lost=0, output_state_on_network_lost=0, read_present_configuration=0, save_configuration=0, binary_input_format=0, binary_output_format=0, binary_endian=0, input_3_active_level=0, input_2_active_level=0, input_1_active_level=0, starting_speed=1, motors_step_turn=1000, hybrid_control_gain=1, encoder_pulses_turn=1000, idle_current_percentage=30, motor_current=40, current_loop_gain=5, homing_slow_speed=200, verbose=False, virtual_axis_follow_acceleration=50, virtual_axis_follow_deceleration=50, home=True, virtual_axis_proportional_coef=1, Kp=0, Ki=5, Kd=0.01):
         Process.__init__(self) # Initialize the threading superclass
-        self.EIP = EIP
         self.hostname = hostname
         self.running = running
-        self.virtual_axis = virtual_axis
-        self.pipe_conn = pipe_conn
+        self.virtual_axis = None
+        self.musician_pipe = musician_pipe
+        self.comm_pipe = comm_pipe
+        self.comm_data = comm_data
+        self.virtual_axis_pipe = virtual_axis_pipe
+        self.t0 = t0
         self.connected = connected
         self.acc = virtual_axis_follow_acceleration
         self.dec = virtual_axis_follow_deceleration
@@ -234,20 +238,14 @@ class AMCIDriver(Process):
         self.home = home
         self.forced_break = False
         self.motor_current = motor_current
-
-        self.initial_settings = Setting(disable_anti_resonance_bit, enable_stall_detection_bit, use_backplane_proximity_bit, use_encoder_bit, home_to_encoder_z_pulse, input_3_function_bits, input_2_function_bits, input_1_function_bits, output_functionality_bit, output_state_control_on_network_lost, output_state_on_network_lost, read_present_configuration, save_configuration, binary_input_format, binary_output_format, binary_endian, input_3_active_level, input_2_active_level, input_1_active_level, starting_speed, motors_step_turn, hybrid_control_gain, encoder_pulses_turn, idle_current_percentage, motor_current, current_loop_gain)
-        #print(starting_speed, motors_step_turn, hybrid_control_gain, encoder_pulses_turn, idle_current_percentage, motor_current, current_loop_gain)
-        
         self.verbose = verbose
         self.init_params()
-        #self.programming_assembly = False
-        self.homing_event = Event()
-        self.homing_move_target = 0
         self.fast_ccw_limit_homing = False
         self.slow_ccw_limit_homing = False
         self.fast_cw_limit_homing = False
         self.slow_cw_limit_homing = False
-        self.homing_movements = []
+
+        self.initial_settings = Setting(disable_anti_resonance_bit, enable_stall_detection_bit, use_backplane_proximity_bit, use_encoder_bit, home_to_encoder_z_pulse, input_3_function_bits, input_2_function_bits, input_1_function_bits, output_functionality_bit, output_state_control_on_network_lost, output_state_on_network_lost, read_present_configuration, save_configuration, binary_input_format, binary_output_format, binary_endian, input_3_active_level, input_2_active_level, input_1_active_level, starting_speed, motors_step_turn, hybrid_control_gain, encoder_pulses_turn, idle_current_percentage, motor_current, current_loop_gain)
 
         self.Kp = Kp
         self.Ki = Ki
@@ -261,367 +259,8 @@ class AMCIDriver(Process):
         self.MV_high = 0
         
         if self.connected:
-            self.C1 = self.EIP.explicit_conn(self.hostname)
-            self.C1.outAssem = [0 for i in range(20*8)]
-            self.C1.inAssem = [0 for i in range(20*8)]
-            
-            pkt = self.C1.listID()
-            if pkt is not None:
-                print("Product name: ", pkt.product_name.decode())
-
-            inputsize = 20
-            outputsize = 20
-
-            # configure i/o
-            # print("Configure with {0} bytes input and {1} bytes output".format(inputsize, outputsize))
-            self.EIP.registerAssembly(ethernetip.EtherNetIP.ENIP_IO_TYPE_INPUT, inputsize, 100, self.C1)
-            self.EIP.registerAssembly(ethernetip.EtherNetIP.ENIP_IO_TYPE_OUTPUT, outputsize, 150, self.C1)
-        
-    def run(self):
-        if self.connected:
-            self.C1.registerSession()
-
-            sen = self.send_data(self.initial_settings.get_bytes_to_send())
-            time.sleep(0.1)
-            data = self.read_input(explicit=True)
-            self.process_incoming_data(data)
-            
-
-            return_to_command_mode = self.get_return_to_command_mode_command()
-            sen = self.send_data(return_to_command_mode.get_bytes_to_send())
-            time.sleep(0.1)
-
-            # preset_pos = self.get_preset_position_command(0)
-            # sen = self.send_data(preset_pos.get_bytes_to_send())
-            # time.sleep(0.1)
-
-            # preset_encoder = self.get_preset_encoder_position_command(0)
-            # sen = self.send_data(preset_encoder.get_bytes_to_send())
-            # time.sleep(0.1)
-            # self.virtual_axis_proportional_coef
-            synchrostep_command = self.get_synchrostep_move_command(0, 0, speed=0, acceleration=self.acc, deceleration=self.dec, proportional_coefficient=self.virtual_axis_proportional_coef, network_delay=0, encoder=False)
-            #print(synchrostep_command.get_bytes_to_send())
-            # sen = self.send_data(synchrostep_command.get_bytes_to_send())
-            # time.sleep(0.1)
-
-            #self.C1.outAssem = synchrostep_command.get_list_to_send()
-
-            self.C1.sendFwdOpenReq(100, 150, 110, torpi=50, otrpi=50, priority=ethernetip.ForwardOpenReq.FORWARD_OPEN_CONN_PRIO_HIGH)
-            self.C1.produce()
-            
-            stop = self.get_immediate_stop_command()
-            self.C1.outAssem = stop.get_list_to_send()
-            time.sleep(0.1)
-
-            # input()
-            if self.home:
-                if self.initial_settings.desired_input_2_function_bits == INPUT_FUNCTION_BITS['CCW Limit']:
-                    print("Buscando CCW")
-                    self.ccw_find_home_to_limit()
-                    self.fast_ccw_limit_homing = True
-                    while self.fast_ccw_limit_homing or self.slow_ccw_limit_homing:
-                        if self.verbose:
-                            print('Still not homed...')
-                        time.sleep(0.5)
-                        #break
-                        data = self.read_input()
-                        self.process_incoming_data(data)
-                    time.sleep(0.5)
-
-                    c = self.get_preset_encoder_position_command(-566)
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-
-                    c = self.get_preset_position_command(-566)
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-
-                    c = self.get_relative_move_command(566, programmed_speed=1000, acceleration=self.acc, deceleration=self.dec, motor_current=self.motor_current)
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-                    while True:
-                        data = self.read_input()
-                        self.process_incoming_data(data)
-                        if self.move_complete:
-                            break
-
-                    c = self.get_reset_errors_command()
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-
-                    c = self.get_return_to_command_mode_command()
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-
-                    if self.verbose:
-                        print('Homed')
-
-                elif self.initial_settings.desired_input_2_function_bits == INPUT_FUNCTION_BITS['CW Limit']:
-                    print("Buscando CW")
-                    self.cw_find_home_to_limit()
-                    self.fast_cw_limit_homing = True
-                    while self.fast_cw_limit_homing or self.slow_cw_limit_homing:
-                        if self.verbose:
-                            print('Still not homed...')
-                        time.sleep(0.5)
-                        #break
-                        data = self.read_input()
-                        self.process_incoming_data(data)
-                    time.sleep(0.5)
-                    c = self.get_relative_move_command(-800, programmed_speed=4000, acceleration=self.acc, deceleration=self.dec, motor_current=self.motor_current)
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(2)
-
-                    c = self.get_reset_errors_command()
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-
-                    c = self.get_preset_position_command(0)
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-
-                    c = self.get_preset_encoder_position_command(0)
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-
-                    c = self.get_return_to_command_mode_command()
-                    self.C1.outAssem = c.get_list_to_send()
-                    time.sleep(0.1)
-
-                    if self.verbose:
-                        print('Homed')
-                    # print("Buscando CW")
-                    # self.alpha_home_switch_pos = 1437
-                    # if self.verbose:
-                    #     print("Buscando home clockwise")
-                    # cw_jog = self.get_cw_jog_command(programmed_speed=500)
-                    # stop = self.get_immediate_stop_command()
-                    # self.C1.outAssem = stop.get_list_to_send()
-                    # time.sleep(0.5)
-                    # # self.C1.outAssem = cw_jog.get_list_to_send()
-                    # # while True:
-                    # #     time.sleep(1)
-                    # self.cw_find_home_to_limit()
-                    # self.fast_cw_limit_homing = True
-                    # while self.fast_cw_limit_homing or self.slow_cw_limit_homing:
-                    #     if self.verbose:
-                    #         print('Still not homed3...')
-                    #     time.sleep(0.5)
-                    #     #break
-                    #     data = self.read_input()
-                    #     self.process_incoming_data(data)
-                    # c = self.get_relative_move_command(-self.alpha_home_switch_pos, programmed_speed=1000, acceleration=self.acc, deceleration=self.dec)
-                    # self.C1.outAssem = c.get_list_to_send()
-                    # time.sleep(2)
-                    # c = self.get_return_to_command_mode_command()
-                    # self.C1.outAssem = c.get_list_to_send()
-                    # time.sleep(0.1)
-                    # if self.verbose:
-                    #     print('Homed')
-                # else:
-                #     if self.verbose:
-                #         print('Homing through user input')
-                #     self.homing_event.set()
-                #     old_pos = self.homing_move_target
-                #     while self.homing_event.is_set():
-                #         if old_pos != alpha_angle_to_units(self.homing_move_target):
-                #             if self.verbose:
-                #                 print(f'Moving to {self.homing_move_target}')
-                #             c = self.get_relative_move_command(alpha_angle_to_units(self.homing_move_target)-old_pos, programmed_speed=200)
-                #             self.C1.outAssem = c.get_list_to_send()
-                #             old_pos = alpha_angle_to_units(self.h15oming_move_target)
-                #         time.sleep(0.25)
-                #         c = self.get_return_to_command_mode_command()
-                #         self.C1.outAssem = c.get_list_to_send()
-                #     if self.verbose:
-                #         print('Homing done')
-                #     time.sleep(0.25)
-                #     c = self.get_preset_position_command(0)
-                #     self.C1.outAssem = c.get_list_to_send()
-                #     time.sleep(0.1)
-            else:
-                c = self.get_preset_position_command(0)
-                self.C1.outAssem = c.get_list_to_send()
-                time.sleep(0.1)
-
-            self.C1.outAssem = synchrostep_command.get_list_to_send()
-
-            while self.running.is_set():
-                if self.forced_break:
-                    break
-                time.sleep(self.Ts)
-                data = self.read_input(read_output=False)
-                # if self.verbose:
-                #     print(data)
-                self.process_incoming_data(data)
-                corrected_pos, corrected_vel = self.pid_control(self.virtual_axis.pos, self.virtual_axis.vel)
-                if type(corrected_pos) == int and type(corrected_vel) == int:
-                    try:
-                        self.set_output(-corrected_pos, -corrected_vel)
-                        #print(corrected_pos, corrected_vel, self.encoder_position, self.motor_position)
-                    except:
-                        print(f'Error en referencia: {self.virtual_axis.pos}, {self.virtual_axis.vel}')
-                
-            self.C1.stopProduce()
-            self.C1.sendFwdCloseReq(100, 150, 110)
-
-    def pid_control(self, ref_pos, ref_vel):
-        SP = ref_pos
-        CV = self.encoder_position.value
-        e = SP-CV
-        MV_P = self.Kp*e
-        MV_I = self.MV_I0 + self.Ki*self.Ts*e - self.Ka*self.sat(self.MV,self.MV_low,self.MV_high)
-        MV_D = self.Kd*(e-self.e0)/self.Ts
-        #print(MV_P, MV_I, MV_D)
-        self.MV = int(round(SP + MV_P + MV_I + MV_D, 0))
-        self.e0 = e
-        self.MV_I0 = MV_I
-
-        return self.MV, ref_vel
+            self.comm_pipe.send(["explicit_conn", self.hostname, 20*8, 20*8, 20, 20, ethernetip.EtherNetIP.ENIP_IO_TYPE_INPUT, 100, ethernetip.EtherNetIP.ENIP_IO_TYPE_OUTPUT, 150])
     
-    def sat(self, x, low, high):
-        if x < low:
-            return low
-        elif x > high:
-            return high
-        return x
-    
-    def break_loop(self):
-        self.forced_break = True
-
-    def absolute_move(self, target_position, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=5):
-        c = self.get_absolute_move_command(target_position, programmed_speed=programmed_speed, acceleration=acceleration, deceleration=deceleration, motor_current=motor_current, acceleration_jerk=acceleration_jerk)
-        sen = self.send_data(c.get_bytes_to_send())
-        time.sleep(0.1)
-
-    def get_absolute_move_command(self, target_position, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=5):
-        #print(target_position, programmed_speed)
-        command = Command(absolute_move=1, name='Absolute Move')
-        command.desired_command_word_2 = abs(target_position) // 1000 * sign(target_position)
-        command.desired_command_word_3 = abs(target_position)  % 1000 * sign(target_position)
-        command.desired_command_word_4 = programmed_speed // 1000
-        command.desired_command_word_5 = programmed_speed  % 1000
-        command.desired_command_word_6 = acceleration
-        command.desired_command_word_7 = deceleration
-        command.desired_command_word_8 = motor_current
-        command.desired_command_word_9 = acceleration_jerk
-        return command
-
-    def get_relative_move_command(self, target_position, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=0):
-        command = Command(relative_move=1, name='Relative Move')
-        command.desired_command_word_2 = abs(target_position) // 1000 * sign(target_position)
-        command.desired_command_word_3 = abs(target_position)  % 1000 * sign(target_position)
-        command.desired_command_word_4 = programmed_speed // 1000
-        command.desired_command_word_5 = programmed_speed  % 1000
-        command.desired_command_word_6 = acceleration
-        command.desired_command_word_7 = deceleration
-        command.desired_command_word_8 = motor_current
-        command.desired_command_word_9 = acceleration_jerk
-        return command
-
-    def ccw_find_home_to_limit(self):
-        self.fast_ccw_limit_homing = True
-        ccw_jog = self.get_ccw_jog_command(programmed_speed=400, motor_current=self.motor_current)
-        self.C1.outAssem = ccw_jog.get_list_to_send()
-    
-    def cw_find_home_to_limit(self):
-        self.fast_cw_limit_homing = True
-        cw_jog = self.get_cw_jog_command(programmed_speed=4000, acceleration=5, motor_current=self.motor_current)
-        self.C1.outAssem = cw_jog.get_list_to_send()
-
-    def get_reset_errors_command(self):
-        command = Command(reset_errors=1, enable_driver=1, clear_driver_fault=1, name='Reset Errors')
-        command.desired_command_word_8 = self.motor_current
-        return command
-
-    def get_immediate_stop_command(self, motor_current=30):
-        command = Command(immediate_stop=1, name='Immediate Stop')
-        command.desired_command_word_8 = motor_current
-        return command
-
-    def get_ccw_jog_command(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
-        command = Command(jog_ccw=1, name='CCW Jog')
-        command.desired_command_word_4 = programmed_speed // 1000
-        command.desired_command_word_5 = programmed_speed  % 1000
-        command.desired_command_word_6 = acceleration
-        command.desired_command_word_7 = deceleration
-        command.desired_command_word_8 = motor_current
-        command.desired_command_word_9 = acceleration_jerk
-        return command
-
-    def get_cw_jog_command(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
-        command = Command(jog_cw=1, name='CW Jog')
-        command.desired_command_word_4 = programmed_speed // 1000
-        command.desired_command_word_5 = programmed_speed  % 1000
-        command.desired_command_word_6 = acceleration
-        command.desired_command_word_7 = deceleration
-        command.desired_command_word_8 = motor_current
-        command.desired_command_word_9 = acceleration_jerk
-        return command
-
-    def get_return_to_command_mode_command(self):
-        command = Command(name='Return to Command Mode')
-        return command
-
-    def get_preset_position_command(self, position):
-        command = Command(preset_motor_position=1, name='Preset Position')
-        command.desired_command_word_2 = abs(position) // 1000 * sign(position)
-        command.desired_command_word_3 = abs(position)  % 1000 * sign(position)
-        command.desired_command_word_8 = self.motor_current
-        return command
-    
-    def get_preset_encoder_position_command(self, position):
-        command = Command(preset_encoder=1, name='Preset Encoder Position')
-        command.desired_command_word_2 = abs(position) // 1000 * sign(position)
-        command.desired_command_word_3 = abs(position)  % 1000 * sign(position)
-        return command
-
-    def get_ccw_find_home_command(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
-        command = Command(find_home_ccw=1, name='CCW FFind Home')
-        command.desired_command_word_4 = programmed_speed // 1000
-        command.desired_command_word_5 = programmed_speed  % 1000
-        command.desired_command_word_6 = acceleration
-        command.desired_command_word_7 = deceleration
-        command.desired_command_word_8 = motor_current
-        command.desired_command_word_9 = acceleration_jerk
-        return command
-
-    def get_cw_find_home_command(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
-        command = Command(find_home_cw=1, name='CW FFind Home')
-        command.desired_command_word_4 = programmed_speed // 1000
-        command.desired_command_word_5 = programmed_speed  % 1000
-        command.desired_command_word_6 = acceleration
-        command.desired_command_word_7 = deceleration
-        command.desired_command_word_8 = motor_current
-        command.desired_command_word_9 = acceleration_jerk
-        return command
-
-    def read_input(self, read_output=False, explicit=False):
-        if not explicit:
-            words = []
-            for w in range(20):
-                words.append(int("".join(["1" if self.C1.inAssem[i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
-            b = bytearray(20)
-            struct.pack_into('20B', b, 0, *words)
-        else:
-            status = self.C1.getAttrSingle(0x04, 100, 0x03)
-            b = status[1]
-        
-        [i0, i1, i2, i3, i4, i5, i6, i7, i8, i9] = struct.unpack('<10H', b)
-        #print(i0, i1, i2, i3, i4, i5, i6, i7, i8, i9)
-        
-        if read_output:
-            words2 = []
-            for w in range(20):
-                words2.append(int("".join(["1" if self.C1.outAssem[i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
-            b2 = bytearray(20)
-            struct.pack_into('20B', b2, 0, *words2)
-            [o0, o1, o2, o3, o4, o5, o6, o7, o8, o9] = struct.unpack('<10H', b2)
-            # if self.verbose:
-            #     print(o0, o1, o2, o3, o4, o5, o6, o7, o8, o9)
-        
-        return [i0, i1, i2, i3, i4, i5, i6, i7, i8, i9]
-
     def init_params(self):
         self.mode_select_bit = 0
         
@@ -686,8 +325,9 @@ class AMCIDriver(Process):
         self.in_2_active = 0
         self.in_1_active = 0
 
-        self.motor_position = 0
+        self.motor_position = Value("i", 0)
         self.encoder_position = Value("i", 0)
+        self.pos_ref = Value("i", 0)
         self.captured_encoder_position = 0
         self.programed_motor_current = 0
         self.acceleration_jerk = 0
@@ -765,6 +405,302 @@ class AMCIDriver(Process):
         self.desired_command_word_8 = 0
         self.desired_command_word_9 = 0
 
+    def run(self):
+        print("Running amci driver...")
+        self.virtual_axis = VirtualAxis(self.running, 0.01, self.t0, self.virtual_axis_pipe, verbose=False)
+        self.virtual_axis.start()
+        print("Virtual axis started...")
+        if self.connected:
+            self.comm_pipe.send(["registerSession", self.hostname])
+            time.sleep(0.1)
+            
+            self.send_data(self.initial_settings.get_bytes_to_send())
+            time.sleep(0.1)
+            data = self.read_input(explicit=True)
+            self.process_incoming_data(data)
+            
+
+            return_to_command_mode = self.get_return_to_command_mode_command()
+            self.send_data(return_to_command_mode.get_bytes_to_send())
+            time.sleep(0.1)
+
+            synchrostep_command = self.get_synchrostep_move_command(0, 0, speed=0, acceleration=self.acc, deceleration=self.dec, proportional_coefficient=self.virtual_axis_proportional_coef, network_delay=0, encoder=False)
+
+            self.comm_pipe.send(["sendFwdOpenReq", self.hostname, 100, 150, 110, 50, 50, ethernetip.ForwardOpenReq.FORWARD_OPEN_CONN_PRIO_HIGH])
+
+            while self.hostname not in " ".join(self.comm_data.keys()):
+                pass
+            
+            stop = self.get_immediate_stop_command()
+            self.comm_data[self.hostname + '_out'] = stop.get_list_to_send()
+            time.sleep(0.1)
+
+            if self.home:
+                if self.initial_settings.desired_input_2_function_bits == INPUT_FUNCTION_BITS['CCW Limit']:
+                    print("Buscando CCW")
+                    self.ccw_find_home_to_limit()
+                    self.fast_ccw_limit_homing = True
+                    while self.fast_ccw_limit_homing or self.slow_ccw_limit_homing:
+                        if self.verbose:
+                            print('Still not homed...')
+                        time.sleep(0.5)
+                        #break
+                        data = self.read_input()
+                        self.process_incoming_data(data)
+                    time.sleep(0.5)
+
+                    c = self.get_preset_encoder_position_command(-566)
+                    self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_preset_position_command(-566)
+                    self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_relative_move_command(566, programmed_speed=1000, acceleration=self.acc, deceleration=self.dec, motor_current=self.motor_current)
+                    self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                    time.sleep(0.1)
+                    while True:
+                        data = self.read_input()
+                        self.process_incoming_data(data)
+                        if self.move_complete:
+                            break
+
+                    c = self.get_reset_errors_command()
+                    self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_return_to_command_mode_command()
+                    self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    if self.verbose:
+                        print('Homed')
+
+                elif self.initial_settings.desired_input_2_function_bits == INPUT_FUNCTION_BITS['CW Limit']:
+                    print("Buscando CW")
+                    self.cw_find_home_to_limit()
+                    self.fast_cw_limit_homing = True
+                    while self.fast_cw_limit_homing or self.slow_cw_limit_homing:
+                        if self.verbose:
+                            print('Still not homed...')
+                        time.sleep(0.5)
+                        #break
+                        data = self.read_input()
+                        self.process_incoming_data(data)
+                    time.sleep(0.5)
+                    c = self.get_relative_move_command(-800, programmed_speed=4000, acceleration=self.acc, deceleration=self.dec, motor_current=self.motor_current)
+                    self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                    time.sleep(2)
+
+                    c = self.get_reset_errors_command()
+                    self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_preset_position_command(0)
+                    self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_preset_encoder_position_command(0)
+                    self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    c = self.get_return_to_command_mode_command()
+                    self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                    time.sleep(0.1)
+
+                    if self.verbose:
+                        print('Homed')
+            else:
+                c = self.get_preset_position_command(0)
+                self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
+                time.sleep(0.1)
+
+            self.comm_data[self.hostname + '_out'] = synchrostep_command.get_list_to_send()
+
+            while self.running.is_set():
+                if self.forced_break:
+                    break
+                time.sleep(self.Ts)
+                data = self.read_input(read_output=False)
+                # if self.verbose:
+                #     print(data)
+                self.process_incoming_data(data)
+                self.pos_ref.value = self.virtual_axis.pos.value
+                corrected_pos, corrected_vel = self.pid_control(self.virtual_axis.pos.value, self.virtual_axis.vel.value)
+                #print(corrected_pos, corrected_vel)
+                if type(corrected_pos) == int and type(corrected_vel) == int:
+                    try:
+                        self.set_output(-corrected_pos, -corrected_vel)
+                        #print(corrected_pos, corrected_vel, self.encoder_position, self.motor_position)
+                    except:
+                        print(f'Error en referencia: {self.virtual_axis.pos.value}, {self.virtual_axis.vel.value}')
+            
+            self.comm_pipe.send(["stopProduce", self.hostname, 100, 150, 110])
+
+    def pid_control(self, ref_pos, ref_vel):
+        SP = ref_pos
+        CV = self.encoder_position.value
+        e = SP-CV
+        MV_P = self.Kp*e
+        MV_I = self.MV_I0 + self.Ki*self.Ts*e - self.Ka*self.sat(self.MV,self.MV_low,self.MV_high)
+        MV_D = self.Kd*(e-self.e0)/self.Ts
+        #print(MV_P, MV_I, MV_D)
+        self.MV = int(round(SP + MV_P + MV_I + MV_D, 0))
+        self.e0 = e
+        self.MV_I0 = MV_I
+
+        return self.MV, ref_vel
+    
+    def sat(self, x, low, high):
+        if x < low:
+            return low
+        elif x > high:
+            return high
+        return x
+    
+    def break_loop(self):
+        self.forced_break = True
+
+    def absolute_move(self, target_position, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=5):
+        c = self.get_absolute_move_command(target_position, programmed_speed=programmed_speed, acceleration=acceleration, deceleration=deceleration, motor_current=motor_current, acceleration_jerk=acceleration_jerk)
+        sen = self.send_data(c.get_bytes_to_send())
+        time.sleep(0.1)
+
+    def get_absolute_move_command(self, target_position, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=5):
+        #print(target_position, programmed_speed)
+        command = Command(absolute_move=1, name='Absolute Move')
+        command.desired_command_word_2 = abs(target_position) // 1000 * sign(target_position)
+        command.desired_command_word_3 = abs(target_position)  % 1000 * sign(target_position)
+        command.desired_command_word_4 = programmed_speed // 1000
+        command.desired_command_word_5 = programmed_speed  % 1000
+        command.desired_command_word_6 = acceleration
+        command.desired_command_word_7 = deceleration
+        command.desired_command_word_8 = motor_current
+        command.desired_command_word_9 = acceleration_jerk
+        return command
+
+    def get_relative_move_command(self, target_position, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=0):
+        command = Command(relative_move=1, name='Relative Move')
+        command.desired_command_word_2 = abs(target_position) // 1000 * sign(target_position)
+        command.desired_command_word_3 = abs(target_position)  % 1000 * sign(target_position)
+        command.desired_command_word_4 = programmed_speed // 1000
+        command.desired_command_word_5 = programmed_speed  % 1000
+        command.desired_command_word_6 = acceleration
+        command.desired_command_word_7 = deceleration
+        command.desired_command_word_8 = motor_current
+        command.desired_command_word_9 = acceleration_jerk
+        return command
+
+    def ccw_find_home_to_limit(self):
+        self.fast_ccw_limit_homing = True
+        ccw_jog = self.get_ccw_jog_command(programmed_speed=400, acceleration=5, motor_current=self.motor_current)
+        self.comm_data[self.hostname + '_out'] = ccw_jog.get_list_to_send()
+    
+    def cw_find_home_to_limit(self):
+        self.fast_cw_limit_homing = True
+        print(self.motor_current)
+        cw_jog = self.get_cw_jog_command(programmed_speed=4000, motor_current=self.motor_current)
+        self.comm_data[self.hostname + '_out'] = cw_jog.get_list_to_send()
+
+    def get_reset_errors_command(self):
+        command = Command(reset_errors=1, enable_driver=1, clear_driver_fault=1, name='Reset Errors')
+        command.desired_command_word_8 = self.motor_current
+        return command
+
+    def get_immediate_stop_command(self, motor_current=30):
+        command = Command(immediate_stop=1, name='Immediate Stop')
+        command.desired_command_word_8 = motor_current
+        return command
+
+    def get_ccw_jog_command(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
+        command = Command(jog_ccw=1, name='CCW Jog')
+        command.desired_command_word_4 = programmed_speed // 1000
+        command.desired_command_word_5 = programmed_speed  % 1000
+        command.desired_command_word_6 = acceleration
+        command.desired_command_word_7 = deceleration
+        command.desired_command_word_8 = motor_current
+        command.desired_command_word_9 = acceleration_jerk
+        return command
+
+    def get_cw_jog_command(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
+        command = Command(jog_cw=1, name='CW Jog')
+        command.desired_command_word_4 = programmed_speed // 1000
+        command.desired_command_word_5 = programmed_speed  % 1000
+        command.desired_command_word_6 = acceleration
+        command.desired_command_word_7 = deceleration
+        command.desired_command_word_8 = motor_current
+        command.desired_command_word_9 = acceleration_jerk
+        return command
+
+    def get_return_to_command_mode_command(self):
+        command = Command(name='Return to Command Mode')
+        return command
+
+    def get_preset_position_command(self, position):
+        command = Command(preset_motor_position=1, name='Preset Position')
+        command.desired_command_word_2 = abs(position) // 1000 * sign(position)
+        command.desired_command_word_3 = abs(position)  % 1000 * sign(position)
+        command.desired_command_word_8 = self.motor_current
+        return command
+    
+    def get_preset_encoder_position_command(self, position):
+        command = Command(preset_encoder=1, name='Preset Encoder Position')
+        command.desired_command_word_2 = abs(position) // 1000 * sign(position)
+        command.desired_command_word_3 = abs(position)  % 1000 * sign(position)
+        return command
+
+    def get_ccw_find_home_command(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
+        command = Command(find_home_ccw=1, name='CCW FFind Home')
+        command.desired_command_word_4 = programmed_speed // 1000
+        command.desired_command_word_5 = programmed_speed  % 1000
+        command.desired_command_word_6 = acceleration
+        command.desired_command_word_7 = deceleration
+        command.desired_command_word_8 = motor_current
+        command.desired_command_word_9 = acceleration_jerk
+        return command
+
+    def get_cw_find_home_command(self, programmed_speed=200, acceleration=100, deceleration=100, motor_current=30, acceleration_jerk=1):
+        command = Command(find_home_cw=1, name='CW FFind Home')
+        command.desired_command_word_4 = programmed_speed // 1000
+        command.desired_command_word_5 = programmed_speed  % 1000
+        command.desired_command_word_6 = acceleration
+        command.desired_command_word_7 = deceleration
+        command.desired_command_word_8 = motor_current
+        command.desired_command_word_9 = acceleration_jerk
+        return command
+
+    def read_input(self, read_output=False, explicit=False):
+        if not explicit:
+            words = []
+            for w in range(20):
+                words.append(int("".join(["1" if self.comm_data[self.hostname + '_in'][i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
+            b = bytearray(20)
+            struct.pack_into('20B', b, 0, *words)
+        else:
+            self.comm_pipe.send(["getAttrSingle", self.hostname, 0x04, 100, 0x03])
+            while True:
+                response = self.comm_pipe.recv()
+                if response[0] == self.hostname:
+                    status = response[1]
+                    break
+            b = status[1]
+        
+        [i0, i1, i2, i3, i4, i5, i6, i7, i8, i9] = struct.unpack('<10H', b)
+        #print(i0, i1, i2, i3, i4, i5, i6, i7, i8, i9)
+        
+        if read_output:
+            words2 = []
+            for w in range(20):
+                words2.append(int("".join(["1" if self.comm_data[self.hostname + '_out'][i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
+            b2 = bytearray(20)
+            struct.pack_into('20B', b2, 0, *words2)
+            [o0, o1, o2, o3, o4, o5, o6, o7, o8, o9] = struct.unpack('<10H', b2)
+            # if self.verbose:
+            #     print(o0, o1, o2, o3, o4, o5, o6, o7, o8, o9)
+        
+        return [i0, i1, i2, i3, i4, i5, i6, i7, i8, i9]
+
     def get_program_assembled_command(self):
         command = Command(program_assembled=1, name='Program Assembles')
         return command
@@ -790,20 +726,20 @@ class AMCIDriver(Process):
     def program_run_assembled_move(self, steps, motor_current=30, blend_direction=0, dwell_move=0, dwell_time=0):
         #self.programming_assembly = True
         c = self.get_program_assembled_command()
-        self.C1.outAssem = c.get_list_to_send()
+        self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
         time.sleep(0.1)
         for step in steps:
             c = self.get_assembled_segment_command(target_position=step['pos'], programmed_speed=step['speed'], acceleration=step['acc'], deceleration=step['dec'], acceleration_jerk=step['jerk'], motor_current=motor_current)
-            self.C1.outAssem = c.get_list_to_send()
+            self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
             time.sleep(0.1)
             c = self.get_program_assembled_command()
-            self.C1.outAssem = c.get_list_to_send()
+            self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
             time.sleep(0.1)
         c = self.get_return_to_command_mode_command()
-        self.C1.outAssem = c.get_list_to_send()
+        self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
         time.sleep(0.1)
         c = self.get_run_assembled_move_command(motor_current=motor_current, blend_direction=blend_direction, dwell_move=dwell_move, dwell_time=dwell_time)
-        self.C1.outAssem = c.get_list_to_send()
+        self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
         time.sleep(0.1)
 
     def process_incoming_data(self, data):
@@ -962,24 +898,12 @@ class AMCIDriver(Process):
                     steps = [{'pos': 400, 'speed': 400, 'acc': 400, 'dec': 400, 'jerk': 0}, 
                                 {'pos': -450, 'speed': 100, 'acc': 400, 'dec': 400, 'jerk': 0}]
                     self.program_run_assembled_move(steps, dwell_move=1, dwell_time=100, motor_current=self.motor_current)
-                    #print("aqui estoy", self.motor_current)
-                    # self.request_write_relative_move(target_position=1000, programmed_speed=500)
-                    # self.request_write_ccw_jog(programmed_speed=200)
-                    # print('Step 1')
+
                 elif self.slow_ccw_limit_homing:
                     if self.verbose:
                         print('was moving slow ccw')
                     self.slow_ccw_limit_homing = False
-                    # c = self.get_preset_position_command(200)
-                    # #c2 = self.get_preset_encoder_position_command(-800)
-                    # self.C1.outAssem = c.get_list_to_send()
-                    # time.sleep(0.1)
-                    # print(1)
-                    # data = self.read_input()
-                    # self.process_incoming_data(data)
-                    # print(2)
-                    # #self.C1.outAssem = c2.get_list_to_send()
-                    # #time.sleep(0.1)
+                    
                 elif self.fast_cw_limit_homing:
                     if self.verbose:
                         print('was moving fast cw')
@@ -1053,7 +977,7 @@ class AMCIDriver(Process):
             motor_position = pos1*1000 + pos2
             # if motor_position != self.motor_position:
                 # self.motor_position_signal.emit(motor_position)
-            self.motor_position = -motor_position
+            self.motor_position.value = -motor_position
             # if self.verbose:
             #     print(self.motor_position)
             pos1 = data[4]
@@ -1112,10 +1036,11 @@ class AMCIDriver(Process):
             
         for i in range(8):
             for j in range(8):
-                self.C1.outAssem[16*2+i*8+j] = int(words[i][j]) == 1
+                self.comm_data[self.hostname + '_out'][16*2+i*8+j] = int(words[i][j]) == 1
 
     def send_data(self, data):
-        return self.C1.setAttrSingle(0x04, 150, 0x03, data)
+        self.comm_pipe.send(["setAttrSingle", self.hostname, 0x04, 150, 0x03, data])
+        #return self.C1.setAttrSingle(0x04, 150, 0x03, data)
 
     def get_synchrostep_move_command(self, position, direction, speed=200, acceleration=50, deceleration=50, proportional_coefficient=1, network_delay=0, encoder=False):
         command = Command(name='Synchrostep Move')
@@ -1168,61 +1093,51 @@ class AMCIDriver(Process):
         return command
 
 class FlowControllerDriver(Process):
-    def __init__(self, EIP, hostname, running, virtual_axis, pipe_end, connected=True, verbose=False):
+    def __init__(self, hostname, running, t0, mus_pipe, comm_pipe, comm_data, axis_pipe, connected=True, verbose=False): # 
         Process.__init__(self) # Initialize the threading superclass
         self.hostname = hostname
         self.running = running
-        self.virtual_axis = virtual_axis
-        self.pipe_end = pipe_end
+        self.t0 = t0
+        self.mus_pipe = mus_pipe
+        self.axis_pipe = axis_pipe
+        self.comm_pipe = comm_pipe
+        self.comm_data = comm_data
         self.connected = connected
+        self.virtual_flow = None
 
         self.verbose = verbose
         self.mass_flow_reading = Value("d", 0.0)
-        self.vol_flow_reading = 0
-        self.temperature_reading = 0
-        self.absolute_preasure_reading = 0
-        self.mass_flow_set_point_reading = 0
+        self.vol_flow_reading = Value("d", 0.0)
+        self.temperature_reading = Value("d", 0.0)
+        self.absolute_preasure_reading = Value("d", 0.0)
+        self.mass_flow_set_point_reading = Value("d", 0.0)
         
-        self.EIP = EIP
         if self.connected:
-            self.C1 = self.EIP.explicit_conn(self.hostname)
-            self.C1.outAssem = [0 for i in range(26*8)]
-            self.C1.inAssem = [0 for i in range(4*8)]
-
-            pkt = self.C1.listID()
-            if pkt is not None:
-                print("Product name: ", pkt.product_name.decode())
-
-            inputsize = 26
-            outputsize = 4
-
-            self.C1.outAssem = [False for i in range(8*4)]
-
-            # configure i/o
-            # print("Configure with {0} bytes input and {1} bytes output".format(inputsize, outputsize))
-            self.EIP.registerAssembly(ethernetip.EtherNetIP.ENIP_IO_TYPE_INPUT, inputsize, 101, self.C1)
-            self.EIP.registerAssembly(ethernetip.EtherNetIP.ENIP_IO_TYPE_OUTPUT, outputsize, 100, self.C1)
+            self.comm_pipe.send(["explicit_conn", self.hostname, 26*8, 4*8, 26, 4, ethernetip.EtherNetIP.ENIP_IO_TYPE_INPUT, 101, ethernetip.EtherNetIP.ENIP_IO_TYPE_OUTPUT, 100])
 
     def run(self):
+        self.virtual_flow = VirtualFlow(self.running, 0.01, self.t0, self.axis_pipe, verbose=False)
+        self.virtual_flow.start()
         if self.connected:
-            self.C1.registerSession()
-            
-            self.C1.sendFwdOpenReq(101, 100, 0x6e, torpi=50, otrpi=50, priority=ethernetip.ForwardOpenReq.FORWARD_OPEN_CONN_PRIO_HIGH)
-            self.C1.produce()
+            self.comm_pipe.send(["registerSession", self.hostname])
+            #time.sleep(0.1)
+            self.comm_pipe.send(["sendFwdOpenReq", self.hostname, 101, 100, 0x6e, 50, 50, ethernetip.ForwardOpenReq.FORWARD_OPEN_CONN_PRIO_HIGH])
+
+            while self.hostname not in " ".join(self.comm_data.keys()):
+                pass
 
             while self.running.is_set():
                 time.sleep(0.01)
                 self.read_input(read_output=False)
-                self.set_output(self.virtual_axis.flow)
-                
-            self.C1.stopProduce()
-            self.C1.sendFwdCloseReq(101, 100, 0x6e)
+                self.set_output(self.virtual_flow.flow.value)
+            
+            self.comm_pipe.send(["stopProduce", self.hostname, 101, 100, 0x6e])
     
-    def send_ref(self, value):
-        b = bytearray(4)
-        struct.pack_into('f', b, 0, value)
+    # def send_ref(self, value):
+    #     b = bytearray(4)
+    #     struct.pack_into('f', b, 0, value)
         
-        return self.C1.setAttrSingle(0x04, 100, 0x03, b)
+    #     return self.C1.setAttrSingle(0x04, 100, 0x03, b)
     
     def set_output(self, value):
         value = min(50, max(0, value))
@@ -1233,31 +1148,32 @@ class FlowControllerDriver(Process):
         for byte in b:
             words.append(''.join(format(byte, '08b'))[::-1])
         
-        #self.C1.outAssem = [0 for i in range(4*8)]
+        l = [0 for i in range(4*8)]
         for i in range(4):
             for j in range(8):
-                self.C1.outAssem[i*8+j] = int(words[i][j]) == 1
+                l[i*8+j] = int(words[i][j]) == 1
+        self.comm_data[self.hostname + '_out'] = l
 
     def read_input(self, read_output=False):
         words = []
         for w in range(26):
-            words.append(int("".join(["1" if self.C1.inAssem[i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
+            words.append(int("".join(["1" if self.comm_data[self.hostname + '_in'][i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
         b = bytearray(26)
         struct.pack_into('26B', b, 0, *words)
         [g, s, ap, ft, vf, mf, mfsp] = struct.unpack('<HIfffff', b)
 
-        self.mass_flow_reading = mf
-        self.vol_flow_reading = vf
-        self.temperature_reading = ft
-        self.absolute_preasure_reading = ap
-        self.mass_flow_set_point_reading = mfsp
-
+        self.mass_flow_reading.value = mf
+        self.vol_flow_reading.value = vf
+        self.temperature_reading.value = ft
+        self.absolute_preasure_reading.value = ap
+        self.mass_flow_set_point_reading.value = mfsp
+        #print(ft)
         # if s != 0:
         #     print(s)
         if read_output:
             words2 = []
             for w in range(4):
-                words2.append(int("".join(["1" if self.C1.outAssem[i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
+                words2.append(int("".join(["1" if self.comm_data[self.hostname + '_out'][i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
             
             b2 = bytearray(4)
             struct.pack_into('4B', b2, 0, *words2)
@@ -1294,6 +1210,7 @@ class VirtualFlow(Process):
         self.vibrato_freq = Value("d", 0.0)
         
     def run(self):
+        print("Virtual Flow running")
         # f = 1
         # while self.running.is_set():
         #     t = time.time() - self.t0
@@ -1315,6 +1232,8 @@ class VirtualFlow(Process):
                 elif message[0] == "update_ref":
                     self.update_ref(message[1])
                 elif message[0] == "merge_ref":
+                    self.vibrato_amp.value = message[2]
+                    self.vibrato_freq.value = message[3]
                     self.merge_ref(message[1])
                 elif message[0] == "stop":
                     self.stop()
@@ -1382,59 +1301,48 @@ class VirtualFingers(Process):
         self.ref = []
         self.changeEvent.set()
 
-class PreasureSensor(Process):
-    def __init__(self, EIP, hostname, running, pipe_end, connected=False, verbose=False):
+class PressureSensor(Process):
+    def __init__(self, hostname, running, comm_pipe, comm_data, connected=False, verbose=False):
         Process.__init__(self)
         self.running = running
-        self.pipe_end = pipe_end
+        self.comm_pipe = comm_pipe
+        self.comm_data = comm_data
         self.connected = connected
         self.verbose = verbose
-        self.preasure = 0
+        self.pressure = Value("d", 0.0)
         self.hostname = hostname
         self.verbose = verbose
         
-        self.EIP = EIP
         if self.connected:
-            self.C1 = self.EIP.explicit_conn(self.hostname)
-            self.C1.inAssem = [0 for i in range(4*8)]
-
-            pkt = self.C1.listID()
-            if pkt is not None:
-                print("Product name: ", pkt.product_name.decode())
-
-            inputsize = 10
-            outputsize = 4
-
-            # self.C1.outAssem = [False for i in range(8*4)]
-
-            # configure i/o
-            # print("Configure with {0} bytes input and {1} bytes output".format(inputsize, outputsize))
-            self.EIP.registerAssembly(ethernetip.EtherNetIP.ENIP_IO_TYPE_INPUT, inputsize, 101, self.C1)
-            self.EIP.registerAssembly(ethernetip.EtherNetIP.ENIP_IO_TYPE_OUTPUT, outputsize, 100, self.C1)
+            self.comm_pipe.send(["explicit_conn", self.hostname, 0, 4*8, 10, 4, ethernetip.EtherNetIP.ENIP_IO_TYPE_INPUT, 101, ethernetip.EtherNetIP.ENIP_IO_TYPE_OUTPUT, 100])
 
     def run(self):
         if self.connected:
-            self.C1.registerSession()
+            self.comm_pipe.send(["registerSession", self.hostname])
+            #time.sleep(0.1)
+            self.comm_pipe.send(["sendFwdOpenReq", self.hostname, 101, 100, 0x6e, 50, 50, ethernetip.ForwardOpenReq.FORWARD_OPEN_CONN_PRIO_LOW])
             
-            self.C1.sendFwdOpenReq(101, 100, 0x6e, torpi=50, otrpi=50)#, priority=ethernetip.ForwardOpenReq.FORWARD_OPEN_CONN_PRIO_HIGH)
-            self.C1.produce()
+            while self.hostname not in " ".join(self.comm_data.keys()):
+                pass
 
             while self.running.is_set():
                 time.sleep(0.01)
                 self.read_input()
-                
-            self.C1.stopProduce()
-            self.C1.sendFwdCloseReq(101, 100, 0x6e)
+            
+            self.comm_pipe.send(["stopProduce", self.hostname, 101, 100, 0x6e])
 
     def read_input(self):
-        words = []
-        for w in range(10):
-            words.append(int("".join(["1" if self.C1.inAssem[i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
-        b = bytearray(10)
-        struct.pack_into('10B', b, 0, *words)
-        [g, s, ap] = struct.unpack('<HIf', b)
+        try:
+            words = []
+            for w in range(10):
+                words.append(int("".join(["1" if self.comm_data[self.hostname + '_in'][i] else "0" for i in range(w*8+7, w*8-1, -1)]), 2))
+            b = bytearray(10)
+            struct.pack_into('10B', b, 0, *words)
+            [g, s, ap] = struct.unpack('<HIf', b)
 
-        self.preasure = ap
+            self.pressure.value = ap
+        except:
+            print("Hubo un error en la lectura del input del sensor de presion")
 
 flute_dict = {#'C3':  '00000 0000',
               #'C#3': '00000 0000',
@@ -1688,7 +1596,7 @@ class Microphone(Process):
             print("Mic thread killed")
 
 class Musician(Process):
-    def __init__(self, host, connections, running, end_pipe, data, interval=0.01, home=True, x_connect=True, z_connect=True, alpha_connect=True, flow_connect=True, fingers_connect=True, preasure_sensor_connect=True, mic_connect=True):
+    def __init__(self, host, connections, running, end_pipe, data, interval=0.01, home=True, x_connect=True, z_connect=True, alpha_connect=True, flow_connect=True, fingers_connect=True, pressure_sensor_connect=True, mic_connect=True):
         Process.__init__(self) # Initialize the threading superclass
         self.t0 = time.time()
         self.host = host
@@ -1700,14 +1608,13 @@ class Musician(Process):
         self.alpha_connect = alpha_connect
         self.flow_connect = flow_connect
         self.fingers_connect = fingers_connect
-        self.preasure_sensor_connect = preasure_sensor_connect
+        self.pressure_sensor_connect = pressure_sensor_connect
         self.mic_connect = mic_connect
         self.connections = connections
         self.home = home
         self.instrument = 'flute'
         self.data = data
         
-
         self.loaded_route_x = []
         self.loaded_route_z = []
         self.loaded_route_alpha = []
@@ -1715,34 +1622,47 @@ class Musician(Process):
         self.loaded_route_notes = []
     
     def run(self):
-        self.x_virtual_axis_conn, x_virtual_axis_end_conn = Pipe()
-        self.x_virtual_axis = VirtualAxis(self.running, self.interval, self.t0, x_virtual_axis_end_conn, verbose=False)
+        print("Running musician...")
+        
+        # self.x_virtual_axis = VirtualAxis(self.running, self.interval, self.t0, x_virtual_axis_end_conn, verbose=False)
 
-        self.z_virtual_axis_conn, z_virtual_axis_end_conn = Pipe()
-        self.z_virtual_axis = VirtualAxis(self.running, self.interval, self.t0, z_virtual_axis_end_conn, verbose=False)
+        
+        # self.z_virtual_axis = VirtualAxis(self.running, self.interval, self.t0, z_virtual_axis_end_conn, verbose=False)
 
-        self.alpha_virtual_axis_conn, alpha_virtual_axis_end_conn = Pipe()
-        self.alpha_virtual_axis = VirtualAxis(self.running, self.interval, self.t0, alpha_virtual_axis_end_conn, verbose=False)
+        
+        # self.alpha_virtual_axis = VirtualAxis(self.running, self.interval, self.t0, alpha_virtual_axis_end_conn, verbose=False)
 
-        self.virtual_flow_conn, virtual_flow_end_conn = Pipe()
-        self.virtual_flow = VirtualFlow(self.running, self.interval, self.t0, virtual_flow_end_conn, verbose=False)
-
-        if self.x_connect or self.z_connect or self.alpha_connect or self.flow_connect or self.preasure_sensor_connect:
-            self.EIP = ethernetip.EtherNetIP(self.host)
+        if self.x_connect or self.z_connect or self.alpha_connect or self.flow_connect or self.pressure_sensor_connect:
+            communication_connect = True
         else:
-            self.EIP = None
+            communication_connect = False
+
+        print("Connecting communications...")
+        self.comm_event = Event()
+        self.comm_event.set()
+        self.comm_pipe, comm_pipe2 = Pipe()
+        self.communications = CommunicationCenter(self.host, self.comm_event, comm_pipe2, self.data, connect=communication_connect, verbose=True)
+        self.communications.start()
+        print("Communication started...\nConnecting Drivers...")
 
         self.x_driver_conn, x_driver_end_conn = Pipe()
-        self.x_driver = AMCIDriver(self.EIP, self.connections[0], self.running, self.x_virtual_axis, x_driver_end_conn, connected=self.x_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0.01)
+        self.x_virtual_axis_conn, x_virtual_axis_end_conn = Pipe()
+
+        self.x_driver = AMCIDriver(self.connections[0], self.running, x_driver_end_conn, self.comm_pipe, self.data, x_virtual_axis_end_conn, self.t0, connected=self.x_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0.01)
         
         self.z_driver_conn, z_driver_end_conn = Pipe()
-        self.z_driver = AMCIDriver(self.EIP, self.connections[1], self.running, self.z_virtual_axis, z_driver_end_conn, connected=self.z_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0.01)
+        self.z_virtual_axis_conn, z_virtual_axis_end_conn = Pipe()
+
+        self.z_driver = AMCIDriver(self.connections[1], self.running, z_driver_end_conn, self.comm_pipe, self.data, z_virtual_axis_end_conn, self.t0, connected=self.z_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0.01)
         
         self.alpha_driver_conn, alpha_driver_end_conn = Pipe()
-        self.alpha_driver = AMCIDriver(self.EIP, self.connections[2], self.running, self.alpha_virtual_axis, alpha_driver_end_conn, connected=self.alpha_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=1, Kd=0.01)
+        self.alpha_virtual_axis_conn, alpha_virtual_axis_end_conn = Pipe()
+        
+        self.alpha_driver = AMCIDriver(self.connections[2], self.running, alpha_driver_end_conn, self.comm_pipe, self.data, alpha_virtual_axis_end_conn, self.t0, connected=self.alpha_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=1, Kd=0.01)
 
         self.flow_driver_conn, flow_driver_end_conn = Pipe()
-        self.flow_driver = FlowControllerDriver(self.EIP, self.connections[3], self.running, self.virtual_flow, flow_driver_end_conn, connected=self.flow_connect, verbose=False) 
+        self.virtual_flow_conn, virtual_flow_end_conn = Pipe()
+        self.flow_driver = FlowControllerDriver(self.connections[3], self.running, self.t0, flow_driver_end_conn, self.comm_pipe, self.data, virtual_flow_end_conn, connected=self.flow_connect, verbose=False)
 
         self.fingers_driver_conn, fingers_driver_end_conn = Pipe()
         try:
@@ -1756,29 +1676,27 @@ class Musician(Process):
         self.virtual_fingers = VirtualFingers(self.running, 0.05, self.t0, self.fingers_driver, virtual_fingers_driver_end_conn, verbose=True)
 
         self.preasure_sensor_conn, preasure_sensor_end_conn = Pipe()
-        self.preasure_sensor = PreasureSensor(self.EIP, self.connections[4], self.running, preasure_sensor_end_conn, connected=self.preasure_sensor_connect, verbose=True)
+        self.preasure_sensor = PressureSensor(self.connections[4], self.running, self.comm_pipe, self.data, connected=self.pressure_sensor_connect, verbose=True)
         
         self.mic_conn, mic_end_conn = Pipe()
         self.microphone = Microphone(self.running, mic_end_conn, connected=self.mic_connect, verbose=False)
 
-        self.memory_conn, memory_end_conn = Pipe()
-        self.memory = Memory(self.running, self.x_driver, self.z_driver, self.alpha_driver, self.flow_driver, self.preasure_sensor, self.x_virtual_axis, self.z_virtual_axis, self.alpha_virtual_axis, self.virtual_flow, self.microphone, memory_end_conn, self.data, windowWidth=200, interval=0.05)
+        print("Drivers created...\nCreating memory...")
 
-        if not self.EIP is None:
-            self.EIP.startIO()
+        self.memory_conn, memory_end_conn = Pipe()
+        self.memory = Memory(self.running, self.x_driver, self.z_driver, self.alpha_driver, self.flow_driver, self.preasure_sensor, self.microphone, memory_end_conn, self.data, windowWidth=200, interval=0.05)
+
+        print("Memory created...\nStarting...")
 
         self.memory.start()
-        self.x_virtual_axis.start()
-        self.z_virtual_axis.start()
-        self.alpha_virtual_axis.start()
-        self.virtual_flow.start()
+        #self.virtual_flow.start()
         # self.fingers_driver.start()
         # self.virtual_fingers.start()
         
-        # self.x_driver.start()
+        self.x_driver.start()
         # self.z_driver.start()
         # self.alpha_driver.start()
-        # self.flow_driver.start()
+        self.flow_driver.start()
         # self.fingers_driver.start()
         self.preasure_sensor.start()
 
@@ -1804,6 +1722,7 @@ class Musician(Process):
                     # self.end_pipe.send([d])
                 elif message[0] == "get_ref_state":
                     s = self.get_ref_state()
+                    print(s)
                     self.end_pipe.send([s])
                 elif message[0] == "execute_fingers_action":
                     self.execute_fingers_action(message[1], through_action=message[2])
@@ -1837,8 +1756,10 @@ class Musician(Process):
                 elif message[0] == "set_instrument":
                     self.set_instrument(message[1])
         
-        if not self.EIP is None:
-            self.EIP.stopIO()
+        # if not self.EIP is None:
+        #     self.EIP.stopIO()
+        time.sleep(0.5)
+        self.comm_event.clear()
 
     def set_instrument(self, instrument):
         self.instrument = instrument
@@ -1877,9 +1798,7 @@ class Musician(Process):
             # self.alpha_virtual_axis.merge_ref(route_alpha)
             self.alpha_virtual_axis_conn.send(["merge_ref", route_alpha])
         
-        self.virtual_flow_conn.send(["merge_ref", route_flow])
-        self.virtual_flow.vibrato_amp.value = desired_state.vibrato_amp
-        self.virtual_flow.vibrato_freq.value = desired_state.vibrato_freq
+        self.virtual_flow_conn.send(["merge_ref", route_flow, desired_state.vibrato_amp, desired_state.vibrato_freq])
 
         return route['t'][-1]
 
@@ -1934,49 +1853,49 @@ class Musician(Process):
             self.loaded_route_z[i][0] += t_start
             self.loaded_route_alpha[i][0] += t_start
             self.loaded_route_flow[i][0] += t_start
-        self.x_virtual_axis.merge_ref(self.loaded_route_x)
-        self.z_virtual_axis.merge_ref(self.loaded_route_z)
-        self.alpha_virtual_axis.merge_ref(self.loaded_route_alpha)
-        self.virtual_flow.merge_ref(self.loaded_route_flow)
+        self.x_virtual_axis_conn.send(["merge_ref", self.loaded_route_x])
+        self.z_virtual_axis_conn.send(["merge_ref", self.loaded_route_z])
+        self.alpha_virtual_axis_conn.send(["merge_ref", self.loaded_route_alpha])
+        self.virtual_flow_conn.send(["merge_ref", self.loaded_route_flow, 0, 0])
         self.virtual_fingers.ref = self.loaded_route_notes
         self.virtual_fingers.changeEvent.set()
         self.memory.start_saving()
 
     def stop(self):
-        self.x_virtual_axis.stop()
-        self.z_virtual_axis.stop()
-        self.alpha_virtual_axis.stop()
-        self.virtual_flow.stop()
+        self.x_virtual_axis_conn.send(["stop"])
+        self.z_virtual_axis_conn.send(["stop"])
+        self.alpha_virtual_axis_conn.send(["stop"])
+        self.virtual_flow_conn.send(["stop"])
         self.virtual_fingers.stop()
 
     def get_ref_state(self):
         s = State(0,0,0,0)
-        s.x = x_units_to_mm(self.x_virtual_axis.pos.value)
-        s.z = z_units_to_mm(self.z_virtual_axis.pos.value)
-        s.alpha = alpha_units_to_angle(self.alpha_virtual_axis.pos.value)
-        s.flow = self.virtual_flow.flow.value
+        s.x = x_units_to_mm(self.x_driver.pos_ref.value)
+        s.z = z_units_to_mm(self.z_driver.pos_ref.value)
+        s.alpha = alpha_units_to_angle(self.alpha_driver.pos_ref.value)
+        s.flow = self.flow_driver.mass_flow_set_point_reading.value
         return s
 
     def move_to_alpha(self, value):
         self.alpha_driver.homing_move_target = value
 
-    def reset_x_controller(self):
-        self.x_driver.break_loop()
-        time.sleep(0.1)
-        self.x_driver = AMCIDriver(self.EIP, self.connections[0], self.running, self.x_virtual_axis, connected=self.x_connect, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=100, virtual_axis_follow_deceleration=100, home=self.home)
-        self.x_driver.start()
+    # def reset_x_controller(self):
+    #     self.x_driver.break_loop()
+    #     time.sleep(0.1)
+    #     self.x_driver = AMCIDriver(self.EIP, self.connections[0], self.running, self.x_virtual_axis, connected=self.x_connect, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=100, virtual_axis_follow_deceleration=100, home=self.home)
+    #     self.x_driver.start()
 
-    def reset_z_controller(self):
-        self.z_driver.break_loop()
-        time.sleep(0.1)
-        self.z_driver = AMCIDriver(self.EIP, self.connections[1], self.running, self.z_virtual_axis, connected=self.z_connect, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=100, virtual_axis_follow_deceleration=100, home=self.home)
-        self.z_driver.start()
+    # def reset_z_controller(self):
+    #     self.z_driver.break_loop()
+    #     time.sleep(0.1)
+    #     self.z_driver = AMCIDriver(self.EIP, self.connections[1], self.running, self.z_virtual_axis, connected=self.z_connect, starting_speed=1, verbose=False, input_1_function_bits=INPUT_FUNCTION_BITS['CCW Limit'], virtual_axis_follow_acceleration=100, virtual_axis_follow_deceleration=100, home=self.home)
+    #     self.z_driver.start()
 
-    def reset_alpha_controller(self):
-        self.alpha_driver.break_loop()
-        time.sleep(0.1)
-        self.alpha_driver = AMCIDriver(self.EIP, self.connections[2], self.running, self.alpha_virtual_axis, connected=self.alpha_connect, starting_speed=1, verbose=False, motors_step_turn=10000, virtual_axis_follow_acceleration=1000, virtual_axis_follow_deceleration=1000, home=self.home, virtual_axis_proportional_coef=10)
-        self.alpha_driver.start()
+    # def reset_alpha_controller(self):
+    #     self.alpha_driver.break_loop()
+    #     time.sleep(0.1)
+    #     self.alpha_driver = AMCIDriver(self.EIP, self.connections[2], self.running, self.alpha_virtual_axis, connected=self.alpha_connect, starting_speed=1, verbose=False, motors_step_turn=10000, virtual_axis_follow_acceleration=1000, virtual_axis_follow_deceleration=1000, home=self.home, virtual_axis_proportional_coef=10)
+    #     self.alpha_driver.start()
 
     def execute_fingers_action(self, action, through_action=True):
         """
@@ -2003,28 +1922,24 @@ class Memory(Process):
     """
     Esta clase se encarga de almacenar la historia de las variables medidas. windowWidth dice la cantidad de datos a almacenar e interval el tiempo (en milisegundos) para obtener una muestra.
     """
-    def __init__(self, running, x_driver, z_driver, alpha_driver, flow_controller, preasure_sensor, x_reference, z_reference, alpha_reference, flow_reference, microphone, pipe_end, data, windowWidth=200, interval=0.05):
+    def __init__(self, running, x_driver, z_driver, alpha_driver, flow_controller, pressure_sensor, microphone, pipe_end, data, windowWidth=200, interval=0.05):
         Process.__init__(self) # Initialize the threading superclass
         self.saving = False
         self.x_driver = x_driver
         self.z_driver = z_driver
         self.alpha_driver = alpha_driver
         self.flow_controller = flow_controller
-        self.preasure_sensor = preasure_sensor
-        self.x_reference = x_reference
-        self.z_reference = z_reference
-        self.alpha_reference = alpha_reference
-        self.flow_reference = flow_reference
+        self.pressure_sensor = pressure_sensor
         self.microphone = microphone
         self.pipe_end = pipe_end
         self.windowWidth = windowWidth
         self.ref_state = State(0,0,0,0)
         self.real_state = State(0,0,0,0)
 
-        self.ref_state.x = x_units_to_mm(self.x_reference.pos.value)
-        self.ref_state.z = z_units_to_mm(self.z_reference.pos.value)
-        self.ref_state.alpha = alpha_units_to_angle(self.alpha_reference.pos.value)
-        self.ref_state.flow = self.flow_reference.flow.value
+        self.ref_state.x = x_units_to_mm(self.x_driver.pos_ref.value)
+        self.ref_state.z = z_units_to_mm(self.z_driver.pos_ref.value)
+        self.ref_state.alpha = alpha_units_to_angle(self.alpha_driver.pos_ref.value)
+        self.ref_state.flow = self.flow_controller.mass_flow_set_point_reading.value
         self.real_state.x = x_units_to_mm(self.x_driver.encoder_position.value)
         self.real_state.z = z_units_to_mm(self.z_driver.encoder_position.value)
         self.real_state.alpha = alpha_units_to_angle(self.alpha_driver.encoder_position.value)
@@ -2071,10 +1986,10 @@ class Memory(Process):
             #self.flow_ref[:-1] = self.flow_ref[1:]                      # shift data in the temporal mean 1 sample left
             #self.flow_ref[-1] = self.flowController.values['set_point']
             
-            self.ref_state.x = x_units_to_mm(self.x_reference.pos.value)
-            self.ref_state.z = z_units_to_mm(self.z_reference.pos.value)
-            self.ref_state.alpha = alpha_units_to_angle(self.alpha_reference.pos.value)
-            self.ref_state.flow = self.flow_reference.flow.value
+            self.ref_state.x = x_units_to_mm(self.x_driver.pos_ref.value)
+            self.ref_state.z = z_units_to_mm(self.z_driver.pos_ref.value)
+            self.ref_state.alpha = alpha_units_to_angle(self.alpha_driver.pos_ref.value)
+            self.ref_state.flow = self.flow_controller.mass_flow_set_point_reading.value
             self.real_state.x = encoder_units_to_mm(self.x_driver.encoder_position.value)
             self.real_state.z = z_units_to_mm(self.z_driver.encoder_position.value)
             self.real_state.alpha = alpha_units_to_angle(self.alpha_driver.encoder_position.value)
@@ -2084,11 +1999,11 @@ class Memory(Process):
             self.data['x_ref'] = np.hstack([self.data['x_ref'][1:], self.ref_state.x])
             self.data['z_ref'] = np.hstack([self.data['z_ref'][1:], self.ref_state.z])
             self.data['alpha_ref'] = np.hstack([self.data['alpha_ref'][1:], self.ref_state.alpha])
-            self.data['flow_ref'] = np.hstack([self.data['flow_ref'][1:], self.flow_controller.mass_flow_set_point_reading])
+            self.data['flow_ref'] = np.hstack([self.data['flow_ref'][1:], self.flow_controller.mass_flow_set_point_reading.value])
             self.data['x'] = np.hstack([self.data['x'][1:], self.real_state.x])
             self.data['z'] = np.hstack([self.data['z'][1:], self.real_state.z])
             self.data['alpha'] = np.hstack([self.data['alpha'][1:], self.real_state.alpha])
-            self.data['volume_flow'] = np.hstack([self.data['volume_flow'][1:], self.flow_controller.vol_flow_reading])
+            self.data['volume_flow'] = np.hstack([self.data['volume_flow'][1:], self.flow_controller.vol_flow_reading.value])
 
             self.data['radius'] = np.hstack([self.data['radius'][1:], self.real_state.r])
             self.data['theta'] = np.hstack([self.data['theta'][1:], self.real_state.theta])
@@ -2096,9 +2011,9 @@ class Memory(Process):
             self.data['radius_ref'] = np.hstack([self.data['radius_ref'][1:], self.ref_state.r])
             self.data['theta_ref'] = np.hstack([self.data['theta_ref'][1:], self.ref_state.theta])
             self.data['offset_ref'] = np.hstack([self.data['offset_ref'][1:], self.ref_state.o])
-            self.data['mouth_pressure'] = np.hstack([self.data['mouth_pressure'][1:], self.preasure_sensor.preasure])
+            self.data['mouth_pressure'] = np.hstack([self.data['mouth_pressure'][1:], self.pressure_sensor.pressure.value])
             self.data['mass_flow'] = np.hstack([self.data['mass_flow'][1:], self.flow_controller.mass_flow_reading.value])
-            self.data['temperature'] = np.hstack([self.data['temperature'][1:], self.flow_controller.temperature_reading])
+            self.data['temperature'] = np.hstack([self.data['temperature'][1:], self.flow_controller.temperature_reading.value])
             self.data['frequency'] = np.hstack([self.data['frequency'][1:], self.microphone.pitch.value])
             self.data['times'] = np.hstack([self.data['times'][1:], time.time() - self.t0])  
             if self.saving:

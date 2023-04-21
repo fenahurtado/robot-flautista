@@ -18,16 +18,17 @@ if __name__ == '__main__':
     mgr = Manager()
     data = mgr.dict()
     
-
     t0 = time()
     pipe2pierre, pierre_pipe = Pipe()
-    pierre = Musician(host, connections, event, pierre_pipe, data, fingers_connect=False, x_connect=False, z_connect=False, alpha_connect=False, flow_connect=False, preasure_sensor_connect=True, mic_connect=True)
+    pierre = Musician(host, connections, event, pierre_pipe, data, fingers_connect=False, x_connect=True, z_connect=False, alpha_connect=False, flow_connect=False, pressure_sensor_connect=False, mic_connect=False)
     pierre.start()
 
-    pipe2pierre.recv()
+    print(pipe2pierre.recv())
 
     win = Window(app, event, pipe2pierre, data)
     win.show()
+
+    print("Executing GUI...")
 
     sys.exit(app.exec())
 

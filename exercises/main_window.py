@@ -142,6 +142,7 @@ class Window(QMainWindow, Ui_MainWindow):
         '''
         #self.musician.motors_controller.reset_drivers()
         self.running.clear()
+        sleep(0.2)
         #self.player.flowSignalEvent.clear()
         #self.player.moveSignalEvent.clear()
         # self.preasure_sensor_event.clear()
@@ -348,6 +349,7 @@ class Window(QMainWindow, Ui_MainWindow):
         #     pass
         self.musician_pipe.send(['get_ref_state'])
         state = self.musician_pipe.recv()[0]
+        print("Stop", state)
         #state = self.musician.get_ref_state()
         self.moveBox.set_values(state)
 
@@ -1004,6 +1006,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.musician_pipe.send(["stop"])
         self.musician_pipe.send(['get_ref_state'])
         state = self.musician_pipe.recv()[0]
+        print("Stop motors", state)
         self.moveBox.set_values(state)
      
     def change_flute_position(self):
@@ -1042,6 +1045,7 @@ class Window(QMainWindow, Ui_MainWindow):
         if not data:
             self.musician_pipe.send(['get_ref_state'])
             state = self.musician_pipe.recv()[0]
+            print("Initial position action", state)
             data={'type': 0, 'r': state.r, 'theta': state.theta,'offset': state.o}
         if dialog:
             dlg = StartActionForm(parent=self, data=data)

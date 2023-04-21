@@ -85,8 +85,10 @@ class ManualMoveCollapsibleBox(CollapsibleBox):
         self.parent = parent
         self.changing_other = False
         self.musician_pipe = musician_pipe
+        print("Looking for state.")
         musician_pipe.send(['get_ref_state'])
         m_state = musician_pipe.recv()[0]
+        print("Manual move", m_state)
         self.desired_state = State(m_state.r,m_state.theta,m_state.o,m_state.flow)
         self.gridLayout = QtWidgets.QGridLayout()
         self.labelX = QtWidgets.QLabel("X Axis:")
