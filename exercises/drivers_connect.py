@@ -218,7 +218,7 @@ class VirtualAxis(Process):
             self.ref += new_ref
     
     def stop(self):
-        self.ref = [(0,self.pos,0)]
+        self.ref = [(0,self.pos.value,0)]
 
 class AMCIDriver(Process):
     def __init__(self, hostname, running, musician_pipe, comm_pipe, comm_data, virtual_axis_pipe, t0, connected=True, disable_anti_resonance_bit=0, enable_stall_detection_bit=0, use_backplane_proximity_bit=0, use_encoder_bit=0, home_to_encoder_z_pulse=0, input_3_function_bits=0, input_2_function_bits=0, input_1_function_bits=0, output_functionality_bit=0, output_state_control_on_network_lost=0, output_state_on_network_lost=0, read_present_configuration=0, save_configuration=0, binary_input_format=0, binary_output_format=0, binary_endian=0, input_3_active_level=0, input_2_active_level=0, input_1_active_level=0, starting_speed=1, motors_step_turn=1000, hybrid_control_gain=1, encoder_pulses_turn=1000, idle_current_percentage=30, motor_current=40, current_loop_gain=5, homing_slow_speed=200, verbose=False, virtual_axis_follow_acceleration=50, virtual_axis_follow_deceleration=50, home=True, virtual_axis_proportional_coef=1, Kp=0, Ki=5, Kd=0.01):
@@ -516,7 +516,8 @@ class AMCIDriver(Process):
                 self.comm_data[self.hostname + '_out'] = c.get_list_to_send()
                 time.sleep(0.1)
 
-            self.comm_data[self.hostname + '_out'] = synchrostep_command.get_list_to_send()
+            self.synchrostep_out_list = synchrostep_command.get_list_to_send()
+            self.comm_data[self.hostname + '_out'] = self.synchrostep_out_list
 
             while self.running.is_set():
                 if self.forced_break:
@@ -1036,7 +1037,8 @@ class AMCIDriver(Process):
             
         for i in range(8):
             for j in range(8):
-                self.comm_data[self.hostname + '_out'][16*2+i*8+j] = int(words[i][j]) == 1
+                self.synchrostep_out_list[16*2+i*8+j] = int(words[i][j]) == 1
+        self.comm_data[self.hostname + '_out'] = self.synchrostep_out_list
 
     def send_data(self, data):
         self.comm_pipe.send(["setAttrSingle", self.hostname, 0x04, 150, 0x03, data])
@@ -1623,14 +1625,6 @@ class Musician(Process):
     
     def run(self):
         print("Running musician...")
-        
-        # self.x_virtual_axis = VirtualAxis(self.running, self.interval, self.t0, x_virtual_axis_end_conn, verbose=False)
-
-        
-        # self.z_virtual_axis = VirtualAxis(self.running, self.interval, self.t0, z_virtual_axis_end_conn, verbose=False)
-
-        
-        # self.alpha_virtual_axis = VirtualAxis(self.running, self.interval, self.t0, alpha_virtual_axis_end_conn, verbose=False)
 
         if self.x_connect or self.z_connect or self.alpha_connect or self.flow_connect or self.pressure_sensor_connect:
             communication_connect = True
@@ -1648,7 +1642,7 @@ class Musician(Process):
         self.x_driver_conn, x_driver_end_conn = Pipe()
         self.x_virtual_axis_conn, x_virtual_axis_end_conn = Pipe()
 
-        self.x_driver = AMCIDriver(self.connections[0], self.running, x_driver_end_conn, self.comm_pipe, self.data, x_virtual_axis_end_conn, self.t0, connected=self.x_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0.01)
+        self.x_driver = AMCIDriver(self.connections[0], self.running, x_driver_end_conn, self.comm_pipe, self.data, x_virtual_axis_end_conn, self.t0, connected=self.x_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0)
         
         self.z_driver_conn, z_driver_end_conn = Pipe()
         self.z_virtual_axis_conn, z_virtual_axis_end_conn = Pipe()
@@ -1694,8 +1688,8 @@ class Musician(Process):
         # self.virtual_fingers.start()
         
         self.x_driver.start()
-        # self.z_driver.start()
-        # self.alpha_driver.start()
+        self.z_driver.start()
+        self.alpha_driver.start()
         self.flow_driver.start()
         # self.fingers_driver.start()
         self.preasure_sensor.start()
@@ -1738,6 +1732,7 @@ class Musician(Process):
                     self.start_loaded_script()
                 elif  message[0] == "execute_score":
                     self.execute_score(message[1])
+                    print("executed")
                 elif message[0] == "stop":
                     self.stop()
                     self.memory_conn.send(["stop_recording"])
@@ -1788,13 +1783,13 @@ class Musician(Process):
         # print(route_z)
         # print(route_alpha)
         # print(route_flow)
-        if not only_z and not only_alpha and not only_flow:
+        if self.x_connect and not only_z and not only_alpha and not only_flow:
             #self.x_virtual_axis.merge_ref(route_x)
             self.x_virtual_axis_conn.send(["merge_ref", route_x])
-        if not only_x and not only_alpha and not only_flow:
+        if self.z_connect and not only_x and not only_alpha and not only_flow:
             # self.z_virtual_axis.merge_ref(route_z)
             self.z_virtual_axis_conn.send(["merge_ref", route_z])
-        if not only_x and not only_z and not only_flow:
+        if self.alpha_connect and not only_x and not only_z and not only_flow:
             # self.alpha_virtual_axis.merge_ref(route_alpha)
             self.alpha_virtual_axis_conn.send(["merge_ref", route_alpha])
         
@@ -1814,7 +1809,7 @@ class Musician(Process):
         initial_state.x = x_units_to_mm(route['x'][0])
         initial_state.z = z_units_to_mm(route['z'][0])
         initial_state.alpha = alpha_units_to_angle(route['alpha'][0])
-        print(initial_state)
+        # print(initial_state)
         self.move_to(initial_state)
 
         self.loaded_route_x = []
@@ -1839,10 +1834,10 @@ class Musician(Process):
         # self.virtual_flow.merge_ref(route_flow)
 
     def start_loaded_script(self):
-        x = self.x_driver.motor_position
-        z = self.z_driver.motor_position
-        alpha = self.alpha_driver.motor_position
-
+        x = self.x_driver.encoder_position.value
+        z = self.z_driver.encoder_position.value
+        alpha = self.alpha_driver.encoder_position.value
+        
         if x - self.loaded_route_x[0][1] > 10 or z - self.loaded_route_z[0][1] > 10 or alpha - self.loaded_route_alpha[0][1] > 50:
             print('Not quite there yet...')
             return

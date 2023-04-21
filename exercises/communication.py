@@ -29,7 +29,7 @@ class CommunicationCenter(Process):
                 except:
                     print("Hubo un error en la lectura del input en el centro de comunicaciones")
                     print(self.data)
-            if self.pipe.poll(0.1):
+            if self.pipe.poll():
                 message = self.pipe.recv()
                 if self.verbose:
                     print("Message received", message)
@@ -72,7 +72,7 @@ class CommunicationCenter(Process):
                 elif message[0] == "getAttrSingle":
                     att = self.connections[message[1]].getAttrSingle(message[2], message[3], message[4])
                     self.pipe.send([message[1], att])
-
+            time.sleep(0.008)
         self.EIP.stopIO()
 
 
