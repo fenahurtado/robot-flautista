@@ -151,7 +151,7 @@ def get_route_a_b(initial_state, final_state, acc=20, dec=20, T=None, divisions=
     route['t'].append(T)
     return route
 
-def get_route(initial_state, final_state, acc=20, dec=20, T=None, divisions=100, aprox=False):
+def get_route(initial_state, final_state, acc=20, dec=20, T=None, divisions=100, aprox=False, speed=1):
     x_points, z_points, alpha_points, d = get_route_positions(*initial_state.cart_coords(), *final_state.cart_coords(), divisions=divisions, plot=False)
     global B_vel, A_vel
     if not T:
@@ -160,7 +160,7 @@ def get_route(initial_state, final_state, acc=20, dec=20, T=None, divisions=100,
             if not max_dist_rec(acc, dec, T) < d[-1]:
                 break
             T += 0.1
-        T = T*2
+        T = T*2/speed
     else:
         if max_dist_rec(acc, dec, T) < d[-1]:
             print(f'Impossible to achieve such position with given acceleration and deceleration. {d[-1]} > {max_dist_rec(acc, dec, T)}')

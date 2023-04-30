@@ -20,7 +20,7 @@ if __name__ == '__main__':
     
     t0 = time()
     pipe2pierre, pierre_pipe = Pipe()
-    pierre = Musician(host, connections, event, pierre_pipe, data, fingers_connect=False, x_connect=True, z_connect=True, alpha_connect=True, flow_connect=False, pressure_sensor_connect=False, mic_connect=False)
+    pierre = Musician(host, connections, event, pierre_pipe, data, fingers_connect=False, x_connect=False, z_connect=False, alpha_connect=False, flow_connect=False, pressure_sensor_connect=False, mic_connect=False)
     pierre.start()
 
     print(pipe2pierre.recv())

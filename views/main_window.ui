@@ -15,54 +15,6 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="1" column="4">
-     <spacer name="horizontalSpacer">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>40</width>
-        <height>20</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-    <item row="1" column="5">
-     <widget class="QPushButton" name="stopButton">
-      <property name="text">
-       <string>Stop</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="3">
-     <widget class="QPushButton" name="setInitialPositionButton">
-      <property name="text">
-       <string>Set Initial Position</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="2">
-     <widget class="QPushButton" name="fingersActionButton">
-      <property name="text">
-       <string>Fingers Action</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QPushButton" name="addActionButton">
-      <property name="text">
-       <string>Phrase Action</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="7">
-     <widget class="QPushButton" name="executeButton">
-      <property name="text">
-       <string>Execute Score</string>
-      </property>
-     </widget>
-    </item>
     <item row="0" column="0" colspan="9">
      <widget class="QScrollArea" name="scrollArea">
       <property name="sizePolicy">
@@ -82,8 +34,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>1076</width>
-         <height>553</height>
+         <width>1068</width>
+         <height>515</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
@@ -121,12 +73,92 @@
       </widget>
      </widget>
     </item>
-    <item row="1" column="6">
+    <item row="6" column="4">
+     <spacer name="horizontalSpacer">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="6" column="5">
+     <widget class="QPushButton" name="stopButton">
+      <property name="text">
+       <string>Stop</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="7">
+     <widget class="QPushButton" name="executeButton">
+      <property name="text">
+       <string>Execute Score</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="1">
+     <widget class="QPushButton" name="addActionButton">
+      <property name="text">
+       <string>Phrase Action</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="6">
      <widget class="QPushButton" name="startButton">
       <property name="text">
        <string>Start</string>
       </property>
      </widget>
+    </item>
+    <item row="6" column="3">
+     <widget class="QPushButton" name="setInitialPositionButton">
+      <property name="text">
+       <string>Set Initial Position</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="2">
+     <widget class="QPushButton" name="fingersActionButton">
+      <property name="text">
+       <string>Fingers Action</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1" rowspan="2" colspan="7">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QPushButton" name="specialXButton">
+        <property name="text">
+         <string>Special X Routine</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="specialZButton">
+        <property name="text">
+         <string>Special Z Routine</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="specialAlphaButton">
+        <property name="text">
+         <string>Special Alpha Routine</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="specialFlowButton">
+        <property name="text">
+         <string>Special Flow Routine</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -136,7 +168,7 @@
      <x>0</x>
      <y>0</y>
      <width>1092</width>
-     <height>29</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

@@ -18,7 +18,7 @@ from PyQt5.QtGui import QPainterPath, QRegion, QKeySequence
 #from regex import D
 from views.main_window import Ui_MainWindow
 from view_control.forms import FingersActionForm, MoveActionForm, CalibrateFluteForm, CalibrateAngleForm, \
-    ConfigureFluteControlForm, StartActionForm, InstrumentForm, ScaleTimeForm, ParamCorrectionForm, StatesFromNotesForm, ZoomScoreForm
+    ConfigureFluteControlForm, StartActionForm, InstrumentForm, ScaleTimeForm, ParamCorrectionForm, StatesFromNotesForm, ZoomScoreForm, AxisControlLoopForm
 
 from exercises.manual_move import ManualMoveCollapsibleBox
 from view_control.action_display import ActionWidget
@@ -131,7 +131,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.instrument_dialog = None
         self.instrument = 'flute'
         self.zoom_factor = 1
-        self.select_instrument()
+        # self.select_instrument()
         self.moveBox.add_notes(self.instrument)
         
         #self.musician.recorder.start()
@@ -142,7 +142,7 @@ class Window(QMainWindow, Ui_MainWindow):
         '''
         #self.musician.motors_controller.reset_drivers()
         self.running.clear()
-        sleep(0.2)
+        sleep(0.5)
         #self.player.flowSignalEvent.clear()
         #self.player.moveSignalEvent.clear()
         # self.preasure_sensor_event.clear()
@@ -218,14 +218,71 @@ class Window(QMainWindow, Ui_MainWindow):
         self.stopButton.hide()
         self.executeButton.clicked.connect(self.execute_score)
 
-        # self.actionXAxisTool.triggered.connect(self.open_x_driver_tool)
-        # self.actionZAxisTool.triggered.connect(self.open_z_driver_tool)
-        # self.actionAlphaAxisTool.triggered.connect(self.open_alpha_driver_tool)
+        self.actionXAxisTool.triggered.connect(self.configureXLoop)
+        self.actionZAxisTool.triggered.connect(self.configureZLoop)
+        self.actionAlphaAxisTool.triggered.connect(self.configureAlphaLoop)
+
+        self.specialXButton.clicked.connect(self.specialXCommand)
+        self.specialZButton.clicked.connect(self.specialZCommand)
+        self.specialAlphaButton.clicked.connect(self.specialAlphaCommand)
+        self.specialFlowButton.clicked.connect(self.specialFlowCommand)
 
         # self.musician.finished_score.connect(self.finished_score)
         # self.musician.finished_initial_positioning.connect(self.change_playing_initial_position)
         # self.musician.begin_phrase_action.connect(self.change_playing_phrase_act)
         # self.musician.begin_finger_action.connect(self.change_playing_fingers_act)
+
+    def specialXCommand(self):
+        file = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testx.npz"
+        file2 = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testx.csv"
+        file3 = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testx.wav"
+        self.musician_pipe.send(["special_route_x", file, file2, file3])
+
+    def specialZCommand(self):
+        file = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testz.npz"
+        file2 = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testz.csv"
+        file3 = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testz.wav"
+        self.musician_pipe.send(["special_route_z", file, file2, file3])
+
+    def specialAlphaCommand(self):
+        file = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testalpha.npz"
+        file2 = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testalpha.csv"
+        file3 = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testalpha.wav"
+        self.musician_pipe.send(["special_route_alpha", file, file2, file3])
+
+    def specialFlowCommand(self):
+        file = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testflow.npz"
+        file2 = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testflow.csv"
+        file3 = "C:/Users/ferna/Dropbox/UC/Magister/robot-flautista/exercises/data/important/testflow.wav"
+        self.musician_pipe.send(["special_route_flow", file, file2, file3])
+
+    def configureXLoop(self):
+        # [0, 0, 0, 400, 400, 1]
+        self.musician_pipe.send(["x_driver.ask_control"])
+        data = self.musician_pipe.recv()[0]
+        #print(data)
+        dlg = AxisControlLoopForm(parent=self, data=data)
+        dlg.setWindowTitle("Configure X Axis Control Loop")
+        if dlg.exec():
+            self.musician_pipe.send(["x_driver.change_control", data])
+
+    def configureZLoop(self):
+        self.musician_pipe.send(["z_driver.ask_control"])
+        data = self.musician_pipe.recv()[0]
+        #print(data)
+        dlg = AxisControlLoopForm(parent=self, data=data)
+        dlg.setWindowTitle("Configure Z Axis Control Loop")
+        if dlg.exec():
+            self.musician_pipe.send(["z_driver.change_control", data])
+
+    def configureAlphaLoop(self):
+        self.musician_pipe.send(["alpha_driver.ask_control"])
+        data = self.musician_pipe.recv()[0]
+        #print(data)
+        dlg = AxisControlLoopForm(parent=self, data=data)
+        dlg.setWindowTitle("Configure Alpha Axis Control Loop")
+        if dlg.exec():
+            self.musician_pipe.send(["alpha_driver.change_control", data])
 
     def reset_x_controller(self):
         self.musician_pipe.send(["reset_x_controller"])

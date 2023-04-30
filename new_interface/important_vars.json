@@ -1,0 +1,23 @@
+{
+    "ALICAT_CONECTADO": 0,
+    "FlowLoop": 0,
+    "FlowVar": 0,
+    "MOTORES_CONECTADOS": 0,
+    "X_F": 211.0,
+    "X_MICROSTEPS": 1600,
+    "X_MM_x_REVOLUCION": 8,
+    "X_PASOS_x_UNIDAD": 80,
+    "Y_MICROSTEPS": 25000,
+    "Y_PASOS_x_UNIDAD": 80,
+    "Z_F": 76.3,
+    "Z_MICROSTEPS": 1600,
+    "Z_MM_x_REVOLUCION": 8,
+    "Z_PASOS_x_UNIDAD": 80,
+    "alpha_flauta": 0.785398163,
+    "dm": 69,
+    "dp": 54.65,
+    "dq": 0,
+    "kd": 2816,
+    "ki": 0,
+    "kp": 345.0
+}

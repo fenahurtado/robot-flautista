@@ -27,7 +27,7 @@ class CommunicationCenter(Process):
                     self.data[host + '_in'] = conn.inAssem
                     conn.outAssem = self.data[host + '_out']
                 except:
-                    print("Hubo un error en la lectura del input en el centro de comunicaciones")
+                    print("Hubo un error en la lectura del input en el centro de comunicaciones", host)
                     print(self.data)
             if self.pipe.poll():
                 message = self.pipe.recv()

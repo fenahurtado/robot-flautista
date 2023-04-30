@@ -7,17 +7,27 @@
     <x>0</x>
     <y>0</y>
     <width>439</width>
-    <height>303</height>
+    <height>351</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
-    <widget class="QLabel" name="label">
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Aceleration for changes</string>
+      <string>Minimum time for change</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
     </widget>
    </item>
@@ -34,13 +44,6 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_2">
-     <property name="text">
-      <string>Minimum time for change</string>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="1">
     <widget class="QDoubleSpinBox" name="minTimeSpinBox"/>
    </item>
@@ -54,13 +57,10 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="1">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Aceleration for changes</string>
      </property>
     </widget>
    </item>
@@ -74,14 +74,11 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>423</width>
-        <height>106</height>
+        <width>415</width>
+        <height>144</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="1" column="0">
-        <layout class="QHBoxLayout" name="notesLayout"/>
-       </item>
        <item row="1" column="1">
         <spacer name="horizontalSpacer">
          <property name="orientation">
@@ -95,8 +92,18 @@
          </property>
         </spacer>
        </item>
+       <item row="1" column="0">
+        <layout class="QHBoxLayout" name="notesLayout"/>
+       </item>
       </layout>
      </widget>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="2">
+    <widget class="QPushButton" name="button_2">
+     <property name="text">
+      <string>Select all notes</string>
+     </property>
     </widget>
    </item>
   </layout>

@@ -198,7 +198,7 @@ class VirtualAxis(Process):
         else:
             pos = self.ref[-1][1]
             vel = 0
-        return pos, vel
+        return int(pos), int(vel)
 
     def update_ref(self, t):
         while self.ref[0][0] < t and len(self.ref) > 1:
@@ -247,16 +247,28 @@ class AMCIDriver(Process):
 
         self.initial_settings = Setting(disable_anti_resonance_bit, enable_stall_detection_bit, use_backplane_proximity_bit, use_encoder_bit, home_to_encoder_z_pulse, input_3_function_bits, input_2_function_bits, input_1_function_bits, output_functionality_bit, output_state_control_on_network_lost, output_state_on_network_lost, read_present_configuration, save_configuration, binary_input_format, binary_output_format, binary_endian, input_3_active_level, input_2_active_level, input_1_active_level, starting_speed, motors_step_turn, hybrid_control_gain, encoder_pulses_turn, idle_current_percentage, motor_current, current_loop_gain)
 
+        self.Ts = 0.01
+
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
-        self.Ts = 0.01
         self.e0 = 0
         self.MV_I0 = 0
         self.MV = 0
         self.Ka = 0
         self.MV_low = 0
         self.MV_high = 0
+
+        self.Kp_vel = 0
+        self.Ki_vel = 0
+        self.Kd_vel = 0 #0.00005
+        self.e0_vel = 0
+        self.MV_I0_vel = 0
+        self.MV_vel = 0
+        self.Ka_vel = 0
+        self.MV_low_vel = 0
+        self.MV_high_vel = 0
+        self.last_pos = 0
         
         if self.connected:
             self.comm_pipe.send(["explicit_conn", self.hostname, 20*8, 20*8, 20, 20, ethernetip.EtherNetIP.ENIP_IO_TYPE_INPUT, 100, ethernetip.EtherNetIP.ENIP_IO_TYPE_OUTPUT, 150])
@@ -535,7 +547,26 @@ class AMCIDriver(Process):
                         self.set_output(-corrected_pos, -corrected_vel)
                         #print(corrected_pos, corrected_vel, self.encoder_position, self.motor_position)
                     except:
-                        print(f'Error en referencia: {self.virtual_axis.pos.value}, {self.virtual_axis.vel.value}')
+                        print(f'Error en referencia: {self.virtual_axis.pos.value}, {self.virtual_axis.vel.value}, {corrected_pos}, {corrected_vel}')
+                
+                if self.musician_pipe.poll():
+                    message = self.musician_pipe.recv()
+                    if self.verbose:
+                        print("Message received in", self.hostname, message)
+                    if message[0] == "ask_control":
+                        l = [self.Kp, self.Ki, self.Kd, self.acc, self.dec, self.virtual_axis_proportional_coef, self.Kp_vel, self.Ki_vel, self.Kd_vel]
+                        self.musician_pipe.send([l])
+                    if message[0] == "change_control":
+                        self.Kp = message[1][0]
+                        self.Ki = message[1][1]
+                        self.Kd = message[1][2]
+                        self.acc = message[1][3]
+                        self.dec = message[1][4]
+                        self.virtual_axis_proportional_coef = message[1][5]
+                        self.Kp_vel = message[1][6]
+                        self.Ki_vel = message[1][7]
+                        self.Kd_vel = message[1][8]
+                        self.synchrostep_out_list = self.get_synchrostep_move_command(self.virtual_axis.pos.value, 0, speed=self.virtual_axis.vel.value, acceleration=self.acc, deceleration=self.dec, proportional_coefficient=self.virtual_axis_proportional_coef, network_delay=0, encoder=False).get_list_to_send()
             
             self.comm_pipe.send(["stopProduce", self.hostname, 100, 150, 110])
 
@@ -551,7 +582,20 @@ class AMCIDriver(Process):
         self.e0 = e
         self.MV_I0 = MV_I
 
-        return self.MV, ref_vel
+        SP_vel = ref_vel
+        CV_vel = (CV - self.last_pos) / self.Ts
+        e_vel = SP_vel-CV_vel
+        MV_P_vel = self.Kp_vel*e_vel
+        MV_I_vel = self.MV_I0_vel + self.Ki_vel*self.Ts*e_vel - self.Ka_vel*self.sat(self.MV_vel,self.MV_low_vel,self.MV_high_vel)
+        MV_D_vel = self.Kd_vel*(e_vel-self.e0_vel)/self.Ts
+        #print(MV_P, MV_I, MV_D)
+        self.MV_vel = int(round(SP_vel + MV_P_vel + MV_I_vel + MV_D_vel, 0))
+        self.e0_vel = e_vel
+        self.MV_I0_vel = MV_I_vel
+
+        self.last_pos = CV
+
+        return self.MV, self.MV_vel
     
     def sat(self, x, low, high):
         if x < low:
@@ -1531,7 +1575,7 @@ class Microphone(Process):
         self.B2  = [1, -2*np.cos(2*np.pi*fo/self.sr), 1]
         self.A2  = [1, -2*l*np.cos(2*np.pi*fo/self.sr), l**2]
         self.saving = False
-        self.data = np.array([])
+        self.mic_data = np.array([])
         self.print_i = 0
 
     def micCallback(self, indata, frames, time, status):
@@ -1542,11 +1586,11 @@ class Microphone(Process):
         self.last_mic_data = np.hstack((self.last_mic_data, np.transpose(indata)[0]))
         self.last_mic_data = self.last_mic_data[-self.max_num_points:]
         if self.saving:
-            self.data = np.hstack((self.data, np.transpose(indata)[0]))
+            self.mic_data = np.hstack((self.mic_data, np.transpose(indata)[0]))
 
     def start_saving(self):
         #print("Grabando...")
-        self.data = np.array([])
+        self.mic_data = np.array([])
         self.saving = True
     
     def pause_saving(self):
@@ -1557,25 +1601,29 @@ class Microphone(Process):
     
     def finish_saving(self, file_name):
         self.saving = False
-        print(self.data.size)
-        write(file_name, self.sr, self.data)
+        print(self.mic_data.size)
+        write(file_name, self.sr, self.mic_data)
         #self.data.to_csv(file_name)
 
     def run(self):
         if self.connected:
-            #print(sd.query_devices())
+            print(sd.query_devices())
             with sd.InputStream(samplerate=self.sr, channels=1, callback=self.micCallback, device=self.device, latency='high'):#,  blocksize=300000): #, latency='high'
                 while self.running.is_set():
                     if self.end_pipe.poll(0.05):
                         message = self.end_pipe.recv()
+                        print("Message received in microphone", message)
                         if message[0] == 'start_saving':
                             self.start_saving()
                         elif message[0] == 'pause_saving':
                             self.pause_saving()
+                        elif message[0] == 'stop_recording':
+                            self.pause_saving()
                         elif message[0] == 'resume_saving':
                             self.resume_saving()
-                        elif message[0] == 'finish_saving':
+                        elif message[0] == 'save_recorded_data':
                             self.finish_saving(message[1])
+                            print("Audio saved to file", message[1])
                     #pitches, harmonic_rates, argmins, times = compute_yin(self.last_mic_data, self.sr, f0_max=2000)#, w_len=int(len(self.last_mic_data)-1), harmo_thresh=0.1,f0_max=self.sr/2, w_step=int(len(self.last_mic_data)-1)) 
                     #senal_filtrada1 = signal.lfilter(self.flt, self.A, self.last_mic_data)
                     #senal_filtrada2 = signal.lfilter(self.B2, self.A2, senal_filtrada1)
@@ -1642,12 +1690,12 @@ class Musician(Process):
         self.x_driver_conn, x_driver_end_conn = Pipe()
         self.x_virtual_axis_conn, x_virtual_axis_end_conn = Pipe()
 
-        self.x_driver = AMCIDriver(self.connections[0], self.running, x_driver_end_conn, self.comm_pipe, self.data, x_virtual_axis_end_conn, self.t0, connected=self.x_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0)
+        self.x_driver = AMCIDriver(self.connections[0], self.running, x_driver_end_conn, self.comm_pipe, self.data, x_virtual_axis_end_conn, self.t0, connected=self.x_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=1000, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=2, Kd=0)
         
         self.z_driver_conn, z_driver_end_conn = Pipe()
         self.z_virtual_axis_conn, z_virtual_axis_end_conn = Pipe()
 
-        self.z_driver = AMCIDriver(self.connections[1], self.running, z_driver_end_conn, self.comm_pipe, self.data, z_virtual_axis_end_conn, self.t0, connected=self.z_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=400, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=5, Kd=0.01)
+        self.z_driver = AMCIDriver(self.connections[1], self.running, z_driver_end_conn, self.comm_pipe, self.data, z_virtual_axis_end_conn, self.t0, connected=self.z_connect, starting_speed=1, verbose=False, input_2_function_bits=INPUT_FUNCTION_BITS['CW Limit'], virtual_axis_follow_acceleration=400, virtual_axis_follow_deceleration=1000, home=self.home, use_encoder_bit=1, motor_current=40, virtual_axis_proportional_coef=1, encoder_pulses_turn=4000, motors_step_turn=4000, hybrid_control_gain=0, enable_stall_detection_bit=0, current_loop_gain=5, Kp=0, Ki=2, Kd=0)
         
         self.alpha_driver_conn, alpha_driver_end_conn = Pipe()
         self.alpha_virtual_axis_conn, alpha_virtual_axis_end_conn = Pipe()
@@ -1678,12 +1726,12 @@ class Musician(Process):
         print("Drivers created...\nCreating memory...")
 
         self.memory_conn, memory_end_conn = Pipe()
-        self.memory = Memory(self.running, self.x_driver, self.z_driver, self.alpha_driver, self.flow_driver, self.preasure_sensor, self.microphone, memory_end_conn, self.data, windowWidth=200, interval=0.05)
+        self.memory = Memory(self.running, self.x_driver, self.z_driver, self.alpha_driver, self.flow_driver, self.preasure_sensor, self.microphone, memory_end_conn, self.data, windowWidth=200, interval=0.01)
 
         print("Memory created...\nStarting...")
 
         self.memory.start()
-        #self.virtual_flow.start()
+
         # self.fingers_driver.start()
         # self.virtual_fingers.start()
         
@@ -1695,6 +1743,8 @@ class Musician(Process):
         self.preasure_sensor.start()
 
         self.microphone.start()
+
+        self.special_command_clicked = False
 
         self.end_pipe.send(['instances created'])
         print("Pierre started listening...")
@@ -1723,12 +1773,20 @@ class Musician(Process):
                 elif message[0] == "move_to":
                     self.move_to(message[1], T=message[2], only_x=message[3], only_z=message[4], only_alpha=message[5], only_flow=message[6])
                 elif message[0] == "reset_x_controller":
-                    self.reset_x_controller()
+                    pass #self.reset_x_controller()
                 elif message[0] == "reset_z_controller":
-                    self.reset_z_controller()
+                    pass #self.reset_z_controller()
                 elif message[0] == "reset_alpha_controller":
-                    self.reset_alpha_controller()
+                    pass #self.reset_alpha_controller()
+                elif message[0] == "load_routes":
+                    self.loaded_route_x = message[1]
+                    self.loaded_route_z = message[2]
+                    self.loaded_route_alpha = message[3]
+                    self.loaded_route_flow = message[4]
+                    self.loaded_route_notes = message[5]
                 elif  message[0] == "start_loaded_script":
+                    self.memory_conn.send(["start_saving"])
+                    self.mic_conn.send(["start_saving"])
                     self.start_loaded_script()
                 elif  message[0] == "execute_score":
                     self.execute_score(message[1])
@@ -1736,8 +1794,10 @@ class Musician(Process):
                 elif message[0] == "stop":
                     self.stop()
                     self.memory_conn.send(["stop_recording"])
+                    self.mic_conn.send(["stop_recording"])
                 elif message[0] == "memory.save_recorded_data":
-                    self.memory_conn.send(["save_recorded_data", message[1], message[2]])
+                    self.memory_conn.send(["save_recorded_data", message[1]])
+                    self.mic_conn.send(["save_recorded_data", message[2]])
                 elif message[0] == "flow_driver.change_controlled_var":
                     self.flow_driver_conn.send(["change_controlled_var", message[1]])
                 elif message[0] == "flow_driver.change_control_loop":
@@ -1750,11 +1810,64 @@ class Musician(Process):
                     self.flow_driver_conn.send(["change_kd", message[1]])
                 elif message[0] == "set_instrument":
                     self.set_instrument(message[1])
+                elif message[0] == "x_driver.ask_control":
+                    self.x_driver_conn.send(["ask_control"])
+                    data = self.x_driver_conn.recv()[0]
+                    self.end_pipe.send([data])
+                elif message[0] == "x_driver.change_control":
+                    self.x_driver_conn.send(["change_control", message[1]])
+                elif message[0] == "z_driver.ask_control":
+                    self.z_driver_conn.send(["ask_control"])
+                    data = self.z_driver_conn.recv()[0]
+                    self.end_pipe.send([data])
+                elif message[0] == "z_driver.change_control":
+                    self.z_driver_conn.send(["change_control", message[1]])
+                elif message[0] == "alpha_driver.ask_control":
+                    self.alpha_driver_conn.send(["ask_control"])
+                    data = self.alpha_driver_conn.recv()[0]
+                    self.end_pipe.send([data])
+                elif message[0] == "alpha_driver.change_control":
+                    self.alpha_driver_conn.send(["change_control", message[1]])
+                elif message[0] == "special_route_x":
+                    self.special_command(message[1], message[2], message[3])
+                elif message[0] == "special_route_z":
+                    self.special_command(message[1], message[2], message[3])
+                elif message[0] == "special_route_alpha":
+                    self.special_command(message[1], message[2], message[3])
+                elif message[0] == "special_route_flow":
+                    self.special_command(message[1], message[2], message[3])
         
         # if not self.EIP is None:
         #     self.EIP.stopIO()
         time.sleep(0.5)
         self.comm_event.clear()
+
+    def special_command(self, path, save1, save2):
+        if self.special_command_clicked == False:
+            route = np.load(path)
+            self.loaded_route_x = route['x'].tolist()
+            self.loaded_route_z = route['z'].tolist()
+            self.loaded_route_alpha = route['alpha'].tolist()
+            self.loaded_route_flow = route['flow'].tolist()
+            self.loaded_route_notes = route['notes'].tolist()
+            self.virtual_fingers.note_time = 0
+            self.virtual_fingers.next_note_time = 0
+            self.memory_conn.send(["start_saving"])
+            self.mic_conn.send(["start_saving"])
+            self.start_loaded_script()
+            self.special_command_clicked = True
+        else:
+            self.stop()
+            self.memory_conn.send(["stop_recording"])
+            self.mic_conn.send(["stop_recording"])
+            self.memory_conn.send(["save_recorded_data", save1])
+            self.mic_conn.send(["save_recorded_data", save2])
+            desired_state = State(0, 0, 0, 0)
+            desired_state.x = 0
+            desired_state.z = 0
+            desired_state.alpha = 0
+            self.move_to(desired_state)
+            self.special_command_clicked = False
 
     def set_instrument(self, instrument):
         self.instrument = instrument
@@ -1826,7 +1939,9 @@ class Musician(Process):
             self.loaded_route_alpha.append([route['t'][i], route['alpha'][i], route['alpha_vel'][i]])
             self.loaded_route_flow.append([route['t_flow'][i], route['flow'][i]])
 
-        #print(self.loaded_route_flow)
+        # print("flujo:", self.loaded_route_flow)
+        # print("x:", self.loaded_route_x)
+        # print("notas:", self.loaded_route_notes)
 
         # self.x_virtual_axis.merge_ref(route_x)
         # self.z_virtual_axis.merge_ref(route_z)
@@ -1854,7 +1969,7 @@ class Musician(Process):
         self.virtual_flow_conn.send(["merge_ref", self.loaded_route_flow, 0, 0])
         self.virtual_fingers.ref = self.loaded_route_notes
         self.virtual_fingers.changeEvent.set()
-        self.memory.start_saving()
+        #self.memory.start_saving()
 
     def stop(self):
         self.x_virtual_axis_conn.send(["stop"])
@@ -2019,7 +2134,7 @@ class Memory(Process):
                 # new_data = pd.DataFrame({'time': [t for i in range(18)], 'signal':['frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'offset_ref', 'theta_ref', 'radius_ref', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'], 'value': [self.x_ref[-1], self.x[-1], self.z_ref[-1], self.z[-1], self.alpha_ref[-1], self.alpha[-1], self.vel_state_x, self.vel_state_z, self.vel_state_alpha]})
                 # self.data = self.data.append(new_data, ignore_index = True)
 
-                new_data = pd.DataFrame([[self.times[-1] - self.t1, self.frequency[-1], self.temperature[-1], self.mass_flow[-1], self.volume_flow[-1], self.mouth_pressure[-1], self.offset[-1], self.theta[-1], self.radius[-1], self.offset_ref[-1], self.theta_ref[-1], self.radius_ref[-1], self.alpha[-1], self.z[-1], self.x[-1], self.alpha_ref[-1], self.z_ref[-1], self.x_ref[-1], self.alpha_ref[-1]]], columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'offset_ref', 'theta_ref', 'radius_ref', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
+                new_data = pd.DataFrame([[self.data['times'][-1] - self.t1, self.data['frequency'][-1], self.data["temperature"][-1], self.data["mass_flow"][-1], self.data["volume_flow"][-1], self.data["mouth_pressure"][-1], self.data["offset"][-1], self.data["theta"][-1], self.data["radius"][-1], self.data["offset_ref"][-1], self.data["theta_ref"][-1], self.data["radius_ref"][-1], self.data["alpha"][-1], self.data["z"][-1], self.data["x"][-1], self.data["alpha_ref"][-1], self.data["z_ref"][-1], self.data["x_ref"][-1], self.data["flow_ref"][-1]]], columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'offset_ref', 'theta_ref', 'radius_ref', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
                 self.data_frame = pd.concat([self.data_frame, new_data], ignore_index=True)
             
             if self.pipe_end.poll(self.interval):
@@ -2027,6 +2142,13 @@ class Memory(Process):
                 print("Message received in memory:", message[0])
                 if message[0] == "get_data":
                     self.pipe_end.send([self.data])
+                if message[0] == "start_saving":
+                    self.start_saving()
+                if message[0] == "stop_recording":
+                    self.stop_recording()
+                if message[0] == "save_recorded_data":
+                    self.save_recorded_data(message[1])
+                    print("Data saved to file", message[1])
                 # if message[0] == "get_radius":
                 #     self.pipe_end.send([self.radius])
                 # if message[0] == "get_theta":
@@ -2063,7 +2185,7 @@ class Memory(Process):
         self.data_frame = pd.DataFrame(columns=['times','frequency','temperature','mass_flow', 'volume_flow', 'mouth_pressure', 'offset', 'theta', 'radius', 'alpha', 'z', 'x', 'alpha_ref', 'z_ref', 'x_ref', 'flow_ref'])
         # self.data = pd.DataFrame(columns=['time', 'signal', 'value'])
         self.saving = True
-        self.microphone.start_saving()
+        #self.microphone.start_saving()
     
     def pause_saving(self):
         self.saving = False
@@ -2075,13 +2197,13 @@ class Memory(Process):
         self.saving = False
         self.data_frame.to_csv(file_name)
 
-    def save_recorded_data(self, filename1, filename2):
+    def save_recorded_data(self, filename1):
         self.finish_saving(filename1)
-        self.microphone.finish_saving(filename2)
+        # self.microphone.finish_saving(filename2)
 
     def stop_recording(self):
         self.saving = False
-        self.microphone.saving = False
+        # self.microphone.saving = False
 
 if __name__ == "__main__":
     pass

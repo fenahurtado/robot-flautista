@@ -1,0 +1,27 @@
+{
+    "fingers": [],
+    "init_pos": {
+        "offset": 47.08,
+        "r": 99.87,
+        "theta": 54.0,
+        "type": 0
+    },
+    "phrase": [
+        {
+            "acceleration": 153,
+            "deceleration": 153,
+            "deformation": 1,
+            "flow": 0,
+            "jerk": 0,
+            "move": 0,
+            "offset": 47.08,
+            "r": 99.87,
+            "theta": 54.0,
+            "time": 3.0,
+            "type": 1,
+            "vibrato_amp": 0,
+            "vibrato_freq": 0
+        }
+    ],
+    "timestamp": "22/04/2023 12:39:30"
+}

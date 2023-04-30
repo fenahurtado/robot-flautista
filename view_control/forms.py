@@ -18,6 +18,7 @@ from views.score_speed_change import Ui_Dialog as ScoreSpeedDialog
 from views.score_param_correction import Ui_Dialog as ScoreParamCorrectionDialog
 from views.states_from_notes_form import Ui_Dialog as StatesFromNotesDialog
 from views.zoom_form import Ui_Dialog as ZoomScoreDialog
+from views.axis_control_loop_parameters import Ui_Dialog as AxisControlLoopDialog
 from view_control.plot_pyqt import RouteWidget, RampWidget
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5 import QtWidgets
@@ -474,3 +475,58 @@ class ZoomScoreForm(QDialog, ZoomScoreDialog):
     
     def change_zoom_factor(self, value):
         self.data[0] = value
+
+class AxisControlLoopForm(QDialog, AxisControlLoopDialog):
+    def __init__(self, parent=None, data=[0,0,0,400,400,1,0,0,0]):
+        super().__init__(parent)
+        self.setupUi(self)
+        self.parent = parent
+        self.data = data
+
+        self.kp_value.setValue(data[0])
+        self.ki_value.setValue(data[1])
+        self.kd_value.setValue(data[2])
+        self.acc_value.setValue(data[3])
+        self.dec_value.setValue(data[4])
+        self.prop_value.setValue(data[5])
+        self.kp_vel_value.setValue(data[6])
+        self.ki_vel_value.setValue(data[7])
+        self.kd_vel_value.setValue(data[8])
+
+        self.kp_value.valueChanged.connect(self.changed_kp_value)
+        self.ki_value.valueChanged.connect(self.changed_ki_value)
+        self.kd_value.valueChanged.connect(self.changed_kd_value)
+        self.acc_value.valueChanged.connect(self.changed_acc_value)
+        self.dec_value.valueChanged.connect(self.changed_dec_value)
+        self.prop_value.valueChanged.connect(self.changed_prop_value)
+        self.kp_vel_value.valueChanged.connect(self.changed_kp_vel_value)
+        self.ki_vel_value.valueChanged.connect(self.changed_ki_vel_value)
+        self.kd_vel_value.valueChanged.connect(self.changed_kd_vel_value)
+
+    def changed_kp_value(self, value):
+        self.data[0] = value
+
+    def changed_ki_value(self, value):
+        self.data[1] = value
+
+    def changed_kd_value(self, value):
+        self.data[2] = value
+
+    def changed_acc_value(self, value):
+        self.data[3] = value
+
+    def changed_dec_value(self, value):
+        self.data[4] = value
+
+    def changed_prop_value(self, value):
+        self.data[5] = value
+
+    def changed_kp_vel_value(self, value):
+        self.data[6] = value
+
+    def changed_ki_vel_value(self, value):
+        self.data[7] = value
+
+    def changed_kd_vel_value(self, value):
+        self.data[8] = value
+
