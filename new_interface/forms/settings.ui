@@ -44,41 +44,7 @@
        <string>Flute Position</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="2" column="1">
-        <widget class="QDoubleSpinBox" name="zFlutePos">
-         <property name="maximum">
-          <double>300.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QDoubleSpinBox" name="xFlutePos">
-         <property name="maximum">
-          <double>300.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_2">
-         <property name="whatsThis">
-          <string>Z position in the system of reference showed in the picture, where 0,0 is in the upper left point of operation</string>
-         </property>
-         <property name="text">
-          <string>Flute Z Absolute Position</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label">
-         <property name="whatsThis">
-          <string>X position in the system of reference showed in the picture, where 0,0 is in the upper left point of operation</string>
-         </property>
-         <property name="text">
-          <string>Flute X Absolute Position</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0" colspan="2">
+       <item row="1" column="0" colspan="2">
         <widget class="QLabel" name="image_flute_pos">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -94,6 +60,47 @@
          </property>
         </widget>
        </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="whatsThis">
+          <string>Z position in the system of reference showed in the picture, where 0,0 is in the upper left point of operation</string>
+         </property>
+         <property name="text">
+          <string>Z_f</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QDoubleSpinBox" name="zFlutePos">
+         <property name="maximum">
+          <double>300.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QDoubleSpinBox" name="xFlutePos">
+         <property name="maximum">
+          <double>300.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label">
+         <property name="whatsThis">
+          <string>X position in the system of reference showed in the picture, where 0,0 is in the upper left point of operation</string>
+         </property>
+         <property name="text">
+          <string>X_f</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0" colspan="2">
+        <widget class="QLabel" name="label_60">
+         <property name="text">
+          <string>Set the absolute position of the flute respect to the origin found in the homing routine</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_6">
@@ -101,11 +108,212 @@
        <string>Frequency Detection</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_9">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_41">
-         <property name="text">
-          <string>Detection method used</string>
+       <item row="3" column="0" colspan="2">
+        <widget class="QGroupBox" name="YINGroupBox">
+         <property name="whatsThis">
+          <string extracomment="YIN is an autocorrelation based method for fundamental frequency estimation 1. First, a normalized difference function is computed over short (overlapping) frames of audio. Next, the first minimum in the difference function below trough_threshold is selected as an estimate of the signal’s period. Finally, the estimated period is refined using parabolic interpolation before converting into the corresponding frequency."/>
          </property>
+         <property name="title">
+          <string>YIN</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_7">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_35">
+            <property name="whatsThis">
+             <string>minimum frequency in Hertz. The recommended minimum is ~65 Hz though lower values may be feasible.</string>
+            </property>
+            <property name="text">
+             <string>fmin</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QDoubleSpinBox" name="YINfmin">
+            <property name="maximum">
+             <double>4000.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>65.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_39">
+            <property name="whatsThis">
+             <string>number of audio samples between adjacent YIN predictions. If None, defaults to frame_length // 4.</string>
+            </property>
+            <property name="text">
+             <string>hop_length</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QSpinBox" name="YINhop_length">
+            <property name="maximum">
+             <number>10000</number>
+            </property>
+            <property name="value">
+             <number>512</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_36">
+            <property name="whatsThis">
+             <string>maximum frequency in Hertz. The recommended maximum is ~2093 Hz though higher values may be feasible.</string>
+            </property>
+            <property name="text">
+             <string>fmax</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="YINfmax">
+            <property name="maximum">
+             <double>4000.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>2093.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="label_40">
+            <property name="whatsThis">
+             <string>absolute threshold for peak estimation.</string>
+            </property>
+            <property name="text">
+             <string>trough_threshold</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QDoubleSpinBox" name="YINtrough_threshold">
+            <property name="decimals">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_37">
+            <property name="whatsThis">
+             <string>length of the frames in samples. By default, frame_length=2048 corresponds to a time scale of about 93 ms at a sampling rate of 22050 Hz.</string>
+            </property>
+            <property name="text">
+             <string>frame_length</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QSpinBox" name="YINframe_length">
+            <property name="maximum">
+             <number>10000</number>
+            </property>
+            <property name="value">
+             <number>2048</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QCheckBox" name="YINcenter">
+            <property name="whatsThis">
+             <string>If True, the signal y is padded so that frame D[:, t] is centered at y[t * hop_length]. If False, then D[:, t] begins at y[t * hop_length]. Defaults to True, which simplifies the alignment of D onto a time grid by means of librosa.core.frames_to_samples.</string>
+            </property>
+            <property name="text">
+             <string>center</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_38">
+            <property name="whatsThis">
+             <string>length of the window for calculating autocorrelation in samples. If None, defaults to frame_length // 2</string>
+            </property>
+            <property name="text">
+             <string>win_length</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QSpinBox" name="YINwin_length">
+            <property name="maximum">
+             <number>10000</number>
+            </property>
+            <property name="value">
+             <number>1024</number>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QLabel" name="label_56">
+            <property name="whatsThis">
+             <string>If center=True, this argument is passed to np.pad for padding the edges of the signal y. By default (pad_mode=&quot;constant&quot;), y is padded on both sides with zeros. If center=False, this argument is ignored. .. see also:: np.pad</string>
+            </property>
+            <property name="text">
+             <string>pad_mode</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3">
+           <widget class="QComboBox" name="YINpad_mode">
+            <item>
+             <property name="text">
+              <string>constant</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>edge</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>empty</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>linear_ramp</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>maximum</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>mean</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>median</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>minimum</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>reflect</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>symmetric</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>wrap</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
        <item row="0" column="1">
@@ -122,7 +330,14 @@
          </item>
         </widget>
        </item>
-       <item row="3" column="0" colspan="2">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_41">
+         <property name="text">
+          <string>Detection method used</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="2">
         <widget class="QGroupBox" name="pYINGroupBox">
          <property name="whatsThis">
           <string extracomment="pYIN 1 is a modificatin of the YIN algorithm 2 for fundamental frequency (F0) estimation. In the first step of pYIN, F0 candidates and their probabilities are computed using the YIN algorithm. In the second step, Viterbi decoding is used to estimate the most likely F0 sequence and voicing flags."/>
@@ -451,13 +666,6 @@
             </property>
            </widget>
           </item>
-          <item row="12" column="4">
-           <widget class="QLineEdit" name="pYINpad_mode">
-            <property name="text">
-             <string>constant</string>
-            </property>
-           </widget>
-          </item>
           <item row="12" column="0">
            <widget class="QLabel" name="label_57">
             <property name="whatsThis">
@@ -478,164 +686,77 @@
             </property>
            </widget>
           </item>
+          <item row="12" column="4">
+           <widget class="QComboBox" name="pYINpad_mode">
+            <item>
+             <property name="text">
+              <string>constant</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>edge</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>empty</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>linear_ramp</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>maximum</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>mean</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>median</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>minimum</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>reflect</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>symmetric</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>wrap</string>
+             </property>
+            </item>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
-       <item row="2" column="0" colspan="2">
-        <widget class="QGroupBox" name="YINGroupBox">
-         <property name="whatsThis">
-          <string extracomment="YIN is an autocorrelation based method for fundamental frequency estimation 1. First, a normalized difference function is computed over short (overlapping) frames of audio. Next, the first minimum in the difference function below trough_threshold is selected as an estimate of the signal’s period. Finally, the estimated period is refined using parabolic interpolation before converting into the corresponding frequency."/>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_59">
+         <property name="text">
+          <string>Device used</string>
          </property>
-         <property name="title">
-          <string>YIN</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_7">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_35">
-            <property name="whatsThis">
-             <string>minimum frequency in Hertz. The recommended minimum is ~65 Hz though lower values may be feasible.</string>
-            </property>
-            <property name="text">
-             <string>fmin</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QDoubleSpinBox" name="YINfmin">
-            <property name="maximum">
-             <double>4000.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>65.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="label_39">
-            <property name="whatsThis">
-             <string>number of audio samples between adjacent YIN predictions. If None, defaults to frame_length // 4.</string>
-            </property>
-            <property name="text">
-             <string>hop_length</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QSpinBox" name="YINhop_length">
-            <property name="maximum">
-             <number>10000</number>
-            </property>
-            <property name="value">
-             <number>512</number>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_36">
-            <property name="whatsThis">
-             <string>maximum frequency in Hertz. The recommended maximum is ~2093 Hz though higher values may be feasible.</string>
-            </property>
-            <property name="text">
-             <string>fmax</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QDoubleSpinBox" name="YINfmax">
-            <property name="maximum">
-             <double>4000.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>2093.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QLabel" name="label_40">
-            <property name="whatsThis">
-             <string>absolute threshold for peak estimation.</string>
-            </property>
-            <property name="text">
-             <string>trough_threshold</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QDoubleSpinBox" name="YINtrough_threshold">
-            <property name="decimals">
-             <number>5</number>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_37">
-            <property name="whatsThis">
-             <string>length of the frames in samples. By default, frame_length=2048 corresponds to a time scale of about 93 ms at a sampling rate of 22050 Hz.</string>
-            </property>
-            <property name="text">
-             <string>frame_length</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QSpinBox" name="YINframe_length">
-            <property name="maximum">
-             <number>10000</number>
-            </property>
-            <property name="value">
-             <number>2048</number>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QCheckBox" name="YINcenter">
-            <property name="whatsThis">
-             <string>If True, the signal y is padded so that frame D[:, t] is centered at y[t * hop_length]. If False, then D[:, t] begins at y[t * hop_length]. Defaults to True, which simplifies the alignment of D onto a time grid by means of librosa.core.frames_to_samples.</string>
-            </property>
-            <property name="text">
-             <string>center</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_38">
-            <property name="whatsThis">
-             <string>length of the window for calculating autocorrelation in samples. If None, defaults to frame_length // 2</string>
-            </property>
-            <property name="text">
-             <string>win_length</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QSpinBox" name="YINwin_length">
-            <property name="maximum">
-             <number>10000</number>
-            </property>
-            <property name="value">
-             <number>1024</number>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="2">
-           <widget class="QLabel" name="label_56">
-            <property name="whatsThis">
-             <string>If center=True, this argument is passed to np.pad for padding the edges of the signal y. By default (pad_mode=&quot;constant&quot;), y is padded on both sides with zeros. If center=False, this argument is ignored. .. see also:: np.pad</string>
-            </property>
-            <property name="text">
-             <string>pad_mode</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="3">
-           <widget class="QLineEdit" name="YINpad_mode">
-            <property name="text">
-             <string>constant</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
         </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="micDevices"/>
        </item>
       </layout>
      </widget>

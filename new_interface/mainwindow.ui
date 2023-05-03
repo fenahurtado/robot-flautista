@@ -290,13 +290,27 @@
     <addaction name="actionZ"/>
     <addaction name="actionAlpha"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionUndo"/>
+    <addaction name="actionRedo"/>
+    <addaction name="separator"/>
+    <addaction name="actionChange_to_task_space"/>
+    <addaction name="actionChange_to_joint_space"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuPlot"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNew">
    <property name="text">
     <string>New</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
    </property>
   </action>
   <action name="actionOpen">
@@ -385,6 +399,32 @@
   <action name="actionAlpha">
    <property name="text">
     <string>Alpha</string>
+   </property>
+  </action>
+  <action name="actionUndo">
+   <property name="text">
+    <string>Undo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
+  </action>
+  <action name="actionRedo">
+   <property name="text">
+    <string>Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Y</string>
+   </property>
+  </action>
+  <action name="actionChange_to_task_space">
+   <property name="text">
+    <string>Change to task space</string>
+   </property>
+  </action>
+  <action name="actionChange_to_joint_space">
+   <property name="text">
+    <string>Change to joint space</string>
    </property>
   </action>
  </widget>

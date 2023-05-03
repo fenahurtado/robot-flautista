@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, 'C:/Users/ferna/Dropbox/UC/Magister/robot-flautista')
 import matplotlib.pyplot as plt
-from utils.cinematica import *
+from cinematica import *
 import json
 from scipy import signal
 import csv

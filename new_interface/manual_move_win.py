@@ -27,6 +27,7 @@ class ManualWindow(QMainWindow, ManualWindow):
 
         labels = ["r [mm]", "theta [°]", "offset [mm]", "flow [SLPM]"]
         self.tableWidget.setHorizontalHeaderLabels(labels)
+        self.tableWidget.setAlternatingRowColors(True)
 
         self.speed = 50
 
@@ -79,7 +80,7 @@ class ManualWindow(QMainWindow, ManualWindow):
     def change_note(self, value):
         #print(self.comboBoxNote.itemText(value))
         #self.parent.musician.execute_fingers_action(self.comboBoxNote.itemText(value), through_action=False)
-        self.musician_pipe.send(['execute_fingers_action', self.noteComboBox.itemText(value), False])
+        self.musician_pipe.send(['execute_fingers_action', dict_notes_rev[self.noteComboBox.itemText(value)], False])
         if self.moving_with_notes:
             self.changing_other = True
             pos = LOOK_UP_TABLE[self.noteComboBox.itemText(value)]

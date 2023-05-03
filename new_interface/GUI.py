@@ -1,5 +1,5 @@
 import threading
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QMessageBox, QFileDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QMessageBox, QFileDialog, QSplashScreen
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 
@@ -14,6 +14,7 @@ from datetime import date, datetime
 from multiprocessing import Process, Event, Value, Pipe, Manager
 
 from mainwindow import Ui_MainWindow as PlotWindow
+from start_up_screen import Ui_Form as StartWindow
 from route import *
 from cinematica import *
 from manual_move_win import *
@@ -22,6 +23,46 @@ from plots.plot_window import LivePlotWindow, PassivePlotWindow
 
 from forms.forms import PointForm, VibratoForm, windows_vibrato, FilterForm, filter_windows, filter_choices, FuncTableForm, NoteForm, DurationForm, CorrectionForm, ScaleTimeForm, SettingsForm, TrillForm
 
+
+class StartUpWindow(QSplashScreen, StartWindow):
+    stop_playing = QtCore.pyqtSignal()
+    def __init__(self, app, pipe, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
+        self.app = app
+        self.pipe = pipe
+    
+    def set_progress(self, value):
+        self.progressBar.setValue(int(value))
+
+    def wait_loading(self):
+        progress = 10
+        self.set_progress(10)
+        while True:
+            if self.pipe.poll(0.2):
+                m = self.pipe.recv()
+                if m[0] == "instances created":
+                    progress += 10
+                elif m[0] == "x_driver_started":
+                    progress += 10
+                elif m[0] == "z_driver_started":
+                    progress += 10
+                elif m[0] == "alpha_driver_started":
+                    progress += 10
+                elif m[0] == "memory_started":
+                    progress += 10
+                elif m[0] == "microphone_started":
+                    progress += 10
+                elif m[0] == "flow_driver_started":
+                    progress += 10
+                elif m[0] == "pressure_sensor_started":
+                    progress += 10
+                elif m[0] == "finger_driver_started":
+                    progress += 10
+            self.set_progress(progress)
+            if progress >= 100:
+                self.close()
+                break
 
 class Window(QMainWindow, PlotWindow):
     stop_playing = QtCore.pyqtSignal()
@@ -274,11 +315,21 @@ class Window(QMainWindow, PlotWindow):
         self.actionZ.triggered.connect(self.measure_z_position)
         self.actionAlpha.triggered.connect(self.measure_alpha_position)
 
+        self.undo_list = []
+        self.redo_list = []
+        self.actionUndo.triggered.connect(self.undo)
+        self.actionRedo.triggered.connect(self.redo)
+        self.space_of_instruction = 0
+        self.actionChange_to_joint_space.triggered.connect(self.change_to_joint_space)
+        self.actionChange_to_task_space.triggered.connect(self.change_to_task_space)
+
         self.actionSettings.triggered.connect(self.change_settings)
 
         #self.noteComboBox.addItems(list(dict_notes.values()))
 
         self.populate_graph()
+        r = self.get_copy_of_routes(self.route, self.route2, self.route3, self.route4, self.route5)
+        self.undo_list.append(r)
         
         self.reprint_plot_2()
         self.reprint_plot_3()
@@ -289,6 +340,54 @@ class Window(QMainWindow, PlotWindow):
         self.setWindowTitle("Pierre - Flutist Robot")
         self.file_saved = True
     
+    def get_copy_of_routes(self, r1, r2, r3, r4, r5):
+        r1_copy = {'total_t': r1['total_t'], 'Fs': r1['Fs'], 'points': r1['points'].copy(), 'filters': r1['filters'].copy(), 'vibrato': r1['vibrato'].copy(), 'history': r1['history'].copy()}
+        r2_copy = {'total_t': r2['total_t'], 'Fs': r2['Fs'], 'points': r2['points'].copy(), 'filters': r2['filters'].copy(), 'vibrato': r2['vibrato'].copy(), 'history': r2['history'].copy()}
+        r3_copy = {'total_t': r3['total_t'], 'Fs': r3['Fs'], 'points': r3['points'].copy(), 'filters': r3['filters'].copy(), 'vibrato': r3['vibrato'].copy(), 'history': r3['history'].copy()}
+        r4_copy = {'total_t': r4['total_t'], 'Fs': r4['Fs'], 'points': r4['points'].copy(), 'filters': r4['filters'].copy(), 'vibrato': r4['vibrato'].copy(), 'history': r4['history'].copy()}
+        r5_copy = {'total_t': r5['total_t'], 'Fs': r5['Fs'], 'notes': r5['notes'].copy(), 'trill': r5['trill'].copy(), 'history': r5['history'].copy()}
+        return [r1_copy, r2_copy, r3_copy, r4_copy, r5_copy]
+        #print(len(self.undo_list), len(self.redo_list))
+
+    def undo(self):
+        if len(self.undo_list) >= 2:
+            self.redo_list.append(self.undo_list.pop())
+            r = self.get_copy_of_routes(self.undo_list[-1][0], self.undo_list[-1][1], self.undo_list[-1][2], self.undo_list[-1][3], self.undo_list[-1][4])
+            self.route = r[0]
+            self.route2 = r[1]
+            self.route3 = r[2]
+            self.route4 = r[3]
+            self.route5 = r[4]
+            self.reprint_plot_2()
+            self.reprint_plot_3()
+            self.reprint_plot_4()
+            self.reprint_plot_5()
+            self.reprint_plot_1()
+            self.changes_made(from_hist=True)
+
+    def redo(self):
+        if len(self.redo_list) >= 1:
+            to = self.redo_list.pop()
+            self.undo_list.append(to)
+            r = self.get_copy_of_routes(to[0], to[1], to[2], to[3], to[4])
+            self.route = r[0]
+            self.route2 = r[1]
+            self.route3 = r[2]
+            self.route4 = r[3]
+            self.route5 = r[4]
+            self.reprint_plot_2()
+            self.reprint_plot_3()
+            self.reprint_plot_4()
+            self.reprint_plot_5()
+            self.reprint_plot_1()
+            self.changes_made(from_hist=True)
+
+    def change_to_joint_space(self):
+        self.space_of_instruction = 1
+
+    def change_to_task_space(self):
+        self.space_of_instruction = 0
+
     def soft_stop(self):
         self.musician_pipe.send(["stop"])
         if self.playing.is_set():
@@ -311,7 +410,7 @@ class Window(QMainWindow, PlotWindow):
         x_route = []
         z_route = []
         alpha_route = []
-        notas = []
+        notes = []
 
         Fs = self.route['total_t']
 
@@ -319,8 +418,9 @@ class Window(QMainWindow, PlotWindow):
         t, f_theta, p, vib, fil = calculate_route(self.route2)
         t, f_offset, p, vib, fil = calculate_route(self.route3)
         t, f_flow, p, vib, fil = calculate_route(self.route4)
+        t, f_notes, xp, yp, tx, ty = calculate_notes_route(self.route5)
 
-        ti_index = int(len(t) * self.horizontalSlider.value() / 99)
+        ti_index = int(len(t) * self.horizontalSlider.value() / 100)
 
         x_pos_ref, z_pos_ref, alpha_pos_ref = change_system_of_reference(f_r, f_theta, f_offset)
         x_pos_ref = mm2units(x_pos_ref)
@@ -331,35 +431,31 @@ class Window(QMainWindow, PlotWindow):
         alpha_vel_ref = gradient(alpha_pos_ref)*Fs
 
         for i in range(len(t) - ti_index):
-            flow_route.append([t[i] - t[ti_index], f_flow[i + ti_index]])
-            x_route.append([t[i] - t[ti_index], x_pos_ref[i + ti_index], x_vel_ref[i + ti_index]])
-            z_route.append([t[i] - t[ti_index], z_pos_ref[i + ti_index], z_vel_ref[i + ti_index]])
-            alpha_route.append([t[i] - t[ti_index], alpha_pos_ref[i + ti_index], alpha_vel_ref[i + ti_index]])
+            flow_route.append([t[i], f_flow[i + ti_index]])
+            x_route.append([t[i], x_pos_ref[i + ti_index], x_vel_ref[i + ti_index]])
+            z_route.append([t[i], z_pos_ref[i + ti_index], z_vel_ref[i + ti_index]])
+            alpha_route.append([t[i], alpha_pos_ref[i + ti_index], alpha_vel_ref[i + ti_index]])
+            notes.append([t[i], f_notes[i + ti_index]])
 
-        print("rutas calculadas")
-        self.musician_pipe.send(["load_routes", x_route, z_route, alpha_route, flow_route, notas])
-        print("rutas enviadas")
+        self.musician_pipe.send(["load_routes", x_route, z_route, alpha_route, flow_route, notes])
         desired_state = State(f_r[ti_index], f_theta[ti_index], f_offset[ti_index], 0)
         self.musician_pipe.send(["move_to", desired_state, None, False, False, False, False, 50])
-        print("enviado estado inicial")
         x = threading.Thread(target=self.wait_musician_is_in_place, args=(desired_state,))
         x.start()
-        print("listo 1")
 
     def wait_musician_response(self):
         pass
     
     def wait_musician_is_in_place(self, desired_state):
-        print("esperando musico en posicion")
         if self.connected:
             while True:
-                if self.data['x'][-1] - desired_state.x < 0.5 and self.data['z'][-1] - desired_state.z < 0.5  and self.data['alpha'][-1] - desired_state.alpha < 1:
+                if abs(self.data['x'][-1] - desired_state.x) < 0.5 and abs(self.data['z'][-1] - desired_state.z) < 0.5  and abs(self.data['alpha'][-1] - desired_state.alpha) < 1:
+                    print(self.data['x'][-1] - desired_state.x, self.data['z'][-1] - desired_state.z, self.data['alpha'][-1] - desired_state.alpha)
                     self.playButton.setEnabled(True)
                     break
                 sleep(0.1)
         else:
             self.playButton.setEnabled(True)
-        print("musico en posicion")
 
     def play(self):
         self.playing.set()
@@ -382,7 +478,9 @@ class Window(QMainWindow, PlotWindow):
         theta_plot = np.array([])
         offset_plot = np.array([])
         flow_plot = np.array([])
+        t_plot = np.array([])
         last_t = self.data["times"][-1]
+        first_t = self.data["times"][-1]
         while True:
             if self.playing.is_set():
                 t_act = time() - t_0
@@ -394,7 +492,8 @@ class Window(QMainWindow, PlotWindow):
                     theta_plot = np.hstack([theta_plot, self.data["theta"][last_index+1:]])
                     offset_plot = np.hstack([offset_plot, self.data["offset"][last_index+1:]])
                     flow_plot = np.hstack([flow_plot, self.data["mass_flow"][last_index+1:]])
-                    t_plot = np.linspace(t[ti], t[ti] + t_act, len(r_plot))
+                    t_plot = np.hstack([t_plot, self.data["times"][last_index+1:] - first_t + t[ti]])
+                    # t_plot = np.hstack(t[ti], t[ti] + t_act, len(r_plot))
                     self.r_real.setData(t_plot, r_plot)
                     self.theta_real.setData(t_plot, theta_plot)
                     self.offset_real.setData(t_plot, offset_plot)
@@ -515,7 +614,11 @@ class Window(QMainWindow, PlotWindow):
             self.refresh_settings()
 
     def refresh_settings(self):
-        pass
+        self.musician_pipe.send(["x_driver.change_control", DATA["x_control"]])
+        self.musician_pipe.send(["z_driver.change_control", DATA["z_control"]])
+        self.musician_pipe.send(["alpha_driver.change_control", DATA["alpha_control"]])
+        self.musician_pipe.send(["change_flute_pos", DATA["flute_position"]])
+        self.musician_pipe.send(["microphone.change_frequency_detection", DATA["frequency_detection"]])
 
     def find_recent_files(self):
         '''
@@ -603,6 +706,8 @@ class Window(QMainWindow, PlotWindow):
         Se usa esta función para borrar todas las acciones ingresadas en una partitura
         '''
         self.populate_graph()
+        self.horizontalSlider.setValue(0)
+        self.clear_plot()
         self.reprint_plot_2()
         self.reprint_plot_3()
         self.reprint_plot_4()
@@ -678,7 +783,7 @@ class Window(QMainWindow, PlotWindow):
         self.setWindowTitle("Pierre - Flutist Robot")
         self.file_saved = True
 
-    def changes_made(self):
+    def changes_made(self, from_hist=False):
         '''
         Se llama esta función cuando la partitura sufre algun cambio.
         '''
@@ -686,6 +791,10 @@ class Window(QMainWindow, PlotWindow):
         self.goToCoursorButton.setEnabled(False)
         self.seeMotorRefsButton.setEnabled(False)
         self.file_saved = False
+        if not from_hist:
+            r = self.get_copy_of_routes(self.route, self.route2, self.route3, self.route4, self.route5)
+            self.undo_list.append(r)
+            self.redo_list = []
 
     def change_score_duration(self):
         data = [self.route['total_t']]
@@ -2523,9 +2632,15 @@ class Window(QMainWindow, PlotWindow):
         self.plot_measure(11, "Alpha Position Plot")
 
 if __name__ == "__main__":
+
+    app = QApplication(sys.argv)
+    pipe2pierre, pierre_pipe = Pipe()
+    s = StartUpWindow(app, pipe2pierre)
+    s.show()
+
     from drivers_connect import Musician
     host = "192.168.2.10"
-    connections = ["192.168.2.102", "192.168.2.104", "192.168.2.103", "192.168.2.101", "192.168.2.100"]
+    connections = ["192.168.2.102", "192.168.2.104", "192.168.2.103", "192.168.2.101", "192.168.2.100", "COM3"]
     event = Event()
     event.set()
 
@@ -2533,12 +2648,13 @@ if __name__ == "__main__":
     data = mgr.dict()
     
     t0 = time()
-    pipe2pierre, pierre_pipe = Pipe()
-    pierre = Musician(host, connections, event, pierre_pipe, data, fingers_connect=False, x_connect=False, z_connect=False, alpha_connect=False, flow_connect=False, pressure_sensor_connect=False, mic_connect=True)
+    pierre = Musician(host, connections, event, pierre_pipe, data, fingers_connect=True, x_connect=True, z_connect=True, alpha_connect=True, flow_connect=True, pressure_sensor_connect=True, mic_connect=True)
     pierre.start()
 
-    app = QApplication(sys.argv)
-    win = Window(app, event, pipe2pierre, data, connected=False)
+    # x_driver_started z_driver_started alpha_driver_started memory_started microphone_started flow_driver_started pressure_sensor_started finger_driver_started
+
+    s.wait_loading()
+    win = Window(app, event, pipe2pierre, data, connected=True)
     win.show()
 
     sys.exit(app.exec())

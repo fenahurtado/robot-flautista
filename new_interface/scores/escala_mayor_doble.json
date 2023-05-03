@@ -1,6 +1,7 @@
 {
     "route_fingers": {
         "Fs": 100,
+        "trill": [],
         "history": [
             [
                 "add_note",

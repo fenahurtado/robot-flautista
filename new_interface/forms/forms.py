@@ -20,6 +20,7 @@ from route import dict_notes, dict_notes_rev
 from functools import partial
 from cinematica import *
 from route import dict_notes
+from sounddevice import query_hostapis, query_devices
 
 class SettingsForm(QDialog, SettingsFormDialog):
     def __init__(self, parent=None, data=[0 for i in range(34)]):
@@ -30,6 +31,19 @@ class SettingsForm(QDialog, SettingsFormDialog):
         self.setAllValues()
         self.connectAllSignals()
 
+    def get_available_mics(self):
+        devices = query_devices()
+        hostapis = query_hostapis()
+        l = []
+        for d in devices:
+            i = d['index']
+            n = d['name']
+            h = hostapis[d['hostapi']]['name']
+            inp = d['max_input_channels']
+            out = d['max_output_channels']
+            l.append(f'{i} {n}, {h} ({inp} in, {out} out)')
+        return l
+
     def setAllValues(self):
         global DATA
         self.xFlutePos.setValue(DATA["flute_position"]["X_F"])
@@ -37,6 +51,8 @@ class SettingsForm(QDialog, SettingsFormDialog):
         pixmap = QPixmap('new_interface/forms/flute_pos2.png')
         self.image_flute_pos.setPixmap(pixmap)
 
+        self.micDevices.addItems(self.get_available_mics())
+        self.micDevices.setCurrentIndex(DATA["frequency_detection"]["device"])
         self.frequencyDetectionMethod.setCurrentIndex(DATA["frequency_detection"]["method"])
         self.YINfmin.setValue(DATA["frequency_detection"]["YIN"]["fmin"])
         self.YINfmax.setValue(DATA["frequency_detection"]["YIN"]["fmax"])
@@ -45,7 +61,7 @@ class SettingsForm(QDialog, SettingsFormDialog):
         self.YINhop_length.setValue(DATA["frequency_detection"]["YIN"]["hop_length"])
         self.YINtrough_threshold.setValue(DATA["frequency_detection"]["YIN"]["trough_threshold"])
         self.YINcenter.setChecked(DATA["frequency_detection"]["YIN"]["center"])
-        self.YINpad_mode.setText(DATA["frequency_detection"]["YIN"]["pad_mode"])
+        self.YINpad_mode.setCurrentIndex(DATA["frequency_detection"]["YIN"]["pad_mode"])
         self.pYINfmin.setValue(DATA["frequency_detection"]["pYIN"]["fmin"])
         self.pYINfmax.setValue(DATA["frequency_detection"]["pYIN"]["fmax"])
         self.pYINframe_length.setValue(DATA["frequency_detection"]["pYIN"]["frame_length"])
@@ -62,7 +78,7 @@ class SettingsForm(QDialog, SettingsFormDialog):
         self.pYINno_trough_prob.setValue(DATA["frequency_detection"]["pYIN"]["no_trough_prob"])
         self.pYINfill_na.setCurrentIndex(DATA["frequency_detection"]["pYIN"]["fill_na"])
         self.pYINfill_na_float.setValue(DATA["frequency_detection"]["pYIN"]["fill_na_float"])
-        self.pYINpad_mode.setText(DATA["frequency_detection"]["pYIN"]["pad_mode"])
+        self.pYINpad_mode.setCurrentIndex(DATA["frequency_detection"]["pYIN"]["pad_mode"])
         if DATA["frequency_detection"]["method"] == 0:
             self.pYINGroupBox.hide()
         else:
@@ -113,6 +129,7 @@ class SettingsForm(QDialog, SettingsFormDialog):
         self.zFlutePos.valueChanged.connect(partial(self.update_data, ["flute_position", "Z_F"]))
 
         self.frequencyDetectionMethod.currentIndexChanged.connect(partial(self.update_data, ["frequency_detection", "method"]))
+        self.micDevices.currentIndexChanged.connect(partial(self.update_data, ["frequency_detection", "device"]))
         self.YINfmin.valueChanged.connect(partial(self.update_data, ["frequency_detection", "YIN", "fmin"]))
         self.YINfmax.valueChanged.connect(partial(self.update_data, ["frequency_detection", "YIN", "fmax"]))
         self.YINframe_length.valueChanged.connect(partial(self.update_data, ["frequency_detection", "YIN", "frame_length"]))
@@ -120,7 +137,7 @@ class SettingsForm(QDialog, SettingsFormDialog):
         self.YINhop_length.valueChanged.connect(partial(self.update_data, ["frequency_detection", "YIN", "hop_length"]))
         self.YINtrough_threshold.valueChanged.connect(partial(self.update_data, ["frequency_detection", "YIN", "trough_threshold"]))
         self.YINcenter.stateChanged.connect(partial(self.update_data, ["frequency_detection", "YIN", "center"]))
-        self.YINpad_mode.textEdited.connect(partial(self.update_data, ["frequency_detection", "YIN", "pad_mode"]))
+        self.YINpad_mode.currentIndexChanged.connect(partial(self.update_data, ["frequency_detection", "YIN", "pad_mode"]))
         self.pYINfmin.valueChanged.connect(partial(self.update_data, ["frequency_detection", "pYIN", "fmin"]))
         self.pYINfmax.valueChanged.connect(partial(self.update_data, ["frequency_detection", "pYIN", "fmax"]))
         self.pYINframe_length.valueChanged.connect(partial(self.update_data, ["frequency_detection", "pYIN", "frame_length"]))
@@ -137,7 +154,7 @@ class SettingsForm(QDialog, SettingsFormDialog):
         self.pYINno_trough_prob.valueChanged.connect(partial(self.update_data, ["frequency_detection", "pYIN", "no_trough_prob"]))
         self.pYINfill_na.currentIndexChanged.connect(partial(self.update_data, ["frequency_detection", "pYIN", "fill_na"]))
         self.pYINfill_na_float.valueChanged.connect(partial(self.update_data, ["frequency_detection", "pYIN", "fill_na_float"]))
-        self.pYINpad_mode.textEdited.connect(partial(self.update_data, ["frequency_detection", "pYIN", "pad_mode"]))
+        self.pYINpad_mode.currentIndexChanged.connect(partial(self.update_data, ["frequency_detection", "pYIN", "pad_mode"]))
 
         self.flowVarToControl.currentIndexChanged.connect(partial(self.update_data, ["flow_control", "var_to_control"]))
         self.flowControlLoop.currentIndexChanged.connect(partial(self.update_data, ["flow_control", "control_loop"]))
@@ -188,7 +205,7 @@ class SettingsForm(QDialog, SettingsFormDialog):
                 self.pYINGroupBox.hide()
                 self.YINGroupBox.show()
 
-        print(index)
+        #print(index)
         if len(index) == 1:
             DATA[index[0]] = value
             print(DATA[index[0]])
