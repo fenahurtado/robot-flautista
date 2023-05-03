@@ -14,7 +14,7 @@ from plots.plot_window_view import Ui_MainWindow as PlotWindow
 from plots.pasive_plot import Ui_MainWindow as ReferencePlot
 
 from route import calculate_route
-from cinematica import change_system_of_reference
+from cinematica import change_to_joint_space
 from numpy import gradient
 
 signals = ['Radius', 'Incidence Angle', 'Jet Offset', 'Position', 'Mouth Pressure', 'Mass Flow Rate', 'Volume Flow Rate', 'Air Temperature', 'Sound Frequency', 'X Position', 'Z Position', 'Alpha Position']
@@ -108,7 +108,7 @@ class LivePlotWindow(QMainWindow, PlotWindow, QtCore.QThread):
 
 
 class PassivePlotWindow(QMainWindow, ReferencePlot):
-    def __init__(self, app, route1, route2, route3, parent=None):
+    def __init__(self, app, route1, route2, route3, parent=None, space=0):
         super().__init__(parent)
         self.setupUi(self)
         self.parent = parent
@@ -116,12 +116,19 @@ class PassivePlotWindow(QMainWindow, ReferencePlot):
         self.route1 = route1
         self.route2 = route2
         self.route3 = route3
+        self.space = space
         self.Fs = self.route1['Fs']
-        t, f_r, p, vib, fil = calculate_route(self.route1)
-        t, f_theta, p, vib, fil = calculate_route(self.route2)
-        t, f_offset, p, vib, fil = calculate_route(self.route3)
+        
         try:
-            f_x, f_z, f_alpha = change_system_of_reference(f_r, f_theta, f_offset)
+            if self.space == 0:
+                t, f_r, p, vib, fil = calculate_route(self.route1)
+                t, f_theta, p, vib, fil = calculate_route(self.route2)
+                t, f_offset, p, vib, fil = calculate_route(self.route3)
+                f_x, f_z, f_alpha = change_to_joint_space(f_r, f_theta, f_offset)
+            elif self.space == 1:
+                t, f_x, p, vib, fil = calculate_route(self.route1)
+                t, f_z, p, vib, fil = calculate_route(self.route2)
+                t, f_alpha, p, vib, fil = calculate_route(self.route3)
             self.time = t
             self.x_ref = f_x
             self.x_vel_ref = gradient(self.x_ref)*self.Fs
@@ -164,10 +171,15 @@ class PassivePlotWindow(QMainWindow, ReferencePlot):
     def refresh(self):
         try:
             Fs = self.route1['Fs']
-            t, f_r, p, vib, fil = calculate_route(self.route1)
-            t, f_theta, p, vib, fil = calculate_route(self.route2)
-            t, f_offset, p, vib, fil = calculate_route(self.route3)
-            f_x, f_z, f_alpha = change_system_of_reference(f_r, f_theta, f_offset)
+            if self.space == 0:
+                t, f_r, p, vib, fil = calculate_route(self.route1)
+                t, f_theta, p, vib, fil = calculate_route(self.route2)
+                t, f_offset, p, vib, fil = calculate_route(self.route3)
+                f_x, f_z, f_alpha = change_to_joint_space(f_r, f_theta, f_offset)
+            elif self.space == 1:
+                t, f_x, p, vib, fil = calculate_route(self.route1)
+                t, f_z, p, vib, fil = calculate_route(self.route2)
+                t, f_alpha, p, vib, fil = calculate_route(self.route3)
             time = t
             x_ref = f_x
             x_vel_ref = gradient(x_ref)*Fs

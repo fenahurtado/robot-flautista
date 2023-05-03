@@ -174,7 +174,8 @@ def get_x_z_alpha(r, theta, o):
     return x, z, alpha*180/pi
 
 
-change_system_of_reference = vectorize(get_x_z_alpha)
+change_to_joint_space = vectorize(get_x_z_alpha)
+change_to_task_space = vectorize(get_r_theta_o)
 
 def x_mm_to_units(mm):
     return int(round(mm * 4000 / 8 , 0))

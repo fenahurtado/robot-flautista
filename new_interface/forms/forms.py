@@ -300,11 +300,12 @@ class ScaleTimeForm(QDialog, ScaleTimeFormDialog):
         self.data[0] = value
 
 class CorrectionForm(QDialog, CorrectionFormDialog):
-    def __init__(self, parent=None, data=[0,0,0,0,0,0,0,0,0,0]):
+    def __init__(self, parent=None, data=[0,0,0,0,0,0,0,0,0,0], space=0):
         super().__init__(parent) #super(Form, self).__init__(parent)
         self.setupUi(self)
         self.parent = parent
         self.data = data
+        self.space = space
 
         self.r_dis.setValue(data[0])
         self.theta_dis.setValue(data[1])
@@ -317,6 +318,14 @@ class CorrectionForm(QDialog, CorrectionFormDialog):
         self.leadDelayOffset.setValue(data[7])
         self.leadDelayFlow.setValue(data[8])
         self.leadDelayNotes.setValue(data[9])
+
+        if self.space == 1:
+            self.label.setText("X (mm)")
+            self.label_2.setText("Z (mm)")
+            self.label_3.setText("Alpha (°)")
+            self.label_6.setText("Lead or delay X (s)")
+            self.label_7.setText("Lead or delay Z (s)")
+            self.label_8.setText("Lead or delay Alpha (s)")
 
         self.r_dis.valueChanged.connect(partial(self.update_data, 'r'))
         self.theta_dis.valueChanged.connect(partial(self.update_data, 'theta'))

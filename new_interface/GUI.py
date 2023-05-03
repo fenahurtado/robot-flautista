@@ -384,9 +384,23 @@ class Window(QMainWindow, PlotWindow):
 
     def change_to_joint_space(self):
         self.space_of_instruction = 1
+        self.graphicsView.setLabel('left', "X", units='mm')
+        self.graphicsView_2.setLabel('left', "Z", units='mm')
+        self.graphicsView_3.setLabel('left', "Alpha", units='°')
+        self.checkBox.setText("X")
+        self.checkBox_2.setText("Z")
+        self.checkBox_3.setText("Alpha")
+        # self.seeMotorRefsButton.setText(u"See r, \u03b8 and o")
 
     def change_to_task_space(self):
         self.space_of_instruction = 0
+        self.graphicsView.setLabel('left', 'r', units='mm')
+        self.graphicsView_2.setLabel('left', u"\u03b8", units='°')
+        self.graphicsView_3.setLabel('left', "Offset", units='mm')
+        self.checkBox.setText("Lip-to-edge distance")
+        self.checkBox_2.setText("Angle of incidence")
+        self.checkBox_3.setText("Offset")
+        # self.seeMotorRefsButton.setText("See X, Z and Alpha")
 
     def soft_stop(self):
         self.musician_pipe.send(["stop"])
@@ -413,16 +427,26 @@ class Window(QMainWindow, PlotWindow):
         notes = []
 
         Fs = self.route['total_t']
-
-        t, f_r, p, vib, fil = calculate_route(self.route)
-        t, f_theta, p, vib, fil = calculate_route(self.route2)
-        t, f_offset, p, vib, fil = calculate_route(self.route3)
         t, f_flow, p, vib, fil = calculate_route(self.route4)
         t, f_notes, xp, yp, tx, ty = calculate_notes_route(self.route5)
-
         ti_index = int(len(t) * self.horizontalSlider.value() / 100)
 
-        x_pos_ref, z_pos_ref, alpha_pos_ref = change_system_of_reference(f_r, f_theta, f_offset)
+        if self.space_of_instruction == 0:
+            t, f_r, p, vib, fil = calculate_route(self.route)
+            t, f_theta, p, vib, fil = calculate_route(self.route2)
+            t, f_offset, p, vib, fil = calculate_route(self.route3)
+            x_pos_ref, z_pos_ref, alpha_pos_ref = change_to_joint_space(f_r, f_theta, f_offset)
+            desired_state = State(f_r[ti_index], f_theta[ti_index], f_offset[ti_index], 0)
+
+        elif self.space_of_instruction == 1:
+            t, x_pos_ref, p, vib, fil = calculate_route(self.route)
+            t, z_pos_ref, p, vib, fil = calculate_route(self.route2)
+            t, alpha_pos_ref, p, vib, fil = calculate_route(self.route3)
+            desired_state = State(0, 0, 0, 0)
+            desired_state.x = x_pos_ref[ti_index]
+            desired_state.z = z_pos_ref[ti_index]
+            desired_state.alpha = alpha_pos_ref[ti_index]
+
         x_pos_ref = mm2units(x_pos_ref)
         x_vel_ref = gradient(x_pos_ref)*Fs
         z_pos_ref = mm2units(z_pos_ref)
@@ -438,7 +462,6 @@ class Window(QMainWindow, PlotWindow):
             notes.append([t[i], f_notes[i + ti_index]])
 
         self.musician_pipe.send(["load_routes", x_route, z_route, alpha_route, flow_route, notes])
-        desired_state = State(f_r[ti_index], f_theta[ti_index], f_offset[ti_index], 0)
         self.musician_pipe.send(["move_to", desired_state, None, False, False, False, False, 50])
         x = threading.Thread(target=self.wait_musician_is_in_place, args=(desired_state,))
         x.start()
@@ -488,9 +511,14 @@ class Window(QMainWindow, PlotWindow):
                 self.horizontalSlider.setValue(int(slider_move))
                 last_index = self.data["times"].searchsorted(last_t)
                 try:
-                    r_plot = np.hstack([r_plot, self.data["radius"][last_index+1:]])
-                    theta_plot = np.hstack([theta_plot, self.data["theta"][last_index+1:]])
-                    offset_plot = np.hstack([offset_plot, self.data["offset"][last_index+1:]])
+                    if self.space_of_instruction == 0:
+                        r_plot = np.hstack([r_plot, self.data["radius"][last_index+1:]])
+                        theta_plot = np.hstack([theta_plot, self.data["theta"][last_index+1:]])
+                        offset_plot = np.hstack([offset_plot, self.data["offset"][last_index+1:]])
+                    elif self.space_of_instruction == 1:
+                        r_plot = np.hstack([r_plot, self.data["x"][last_index+1:]])
+                        theta_plot = np.hstack([theta_plot, self.data["z"][last_index+1:]])
+                        offset_plot = np.hstack([offset_plot, self.data["alpha"][last_index+1:]])
                     flow_plot = np.hstack([flow_plot, self.data["mass_flow"][last_index+1:]])
                     t_plot = np.hstack([t_plot, self.data["times"][last_index+1:] - first_t + t[ti]])
                     # t_plot = np.hstack(t[ti], t[ti] + t_act, len(r_plot))
@@ -551,52 +579,56 @@ class Window(QMainWindow, PlotWindow):
         for i in self.offset_error_funcs:
             self.graphicsView_3.removeItem(i)
         possible = True
-        t, f1, p, vib, fil = calculate_route(self.route)
-        t, f2, p, vib, fil = calculate_route(self.route2)
-        t, f3, p, vib, fil = calculate_route(self.route3)
-        error = []
-        for i in range(len(t)):
-            try:
-                get_x_z_alpha(f1[i], f2[i], f3[i])
-            except:
-                possible = False
-                error.append(i)
-        if possible:
+        if self.space_of_instruction == 1:
             self.goToCoursorButton.setEnabled(True)
             self.seeMotorRefsButton.setEnabled(True)
-        else:
-            all_areas = []
-            last_area = []
-            for i in range(len(error)):
-                last_area.append(error[i])
-                if i < len(error) - 1:
-                    if error[i + 1] - 1 != error[i]:
-                        all_areas.append(last_area)
-                        last_area = []
-            if len(last_area):
-                all_areas.append(last_area)
-            for area in all_areas:
-                t_e = []
-                fr_e = []
-                #ft_e = []
-                fo_e = []
-                for i in area:
-                    t_e.append(t[i])
-                    fr_e.append(f1[i])
-                    #ft_e.append(f2[i])
-                    fo_e.append(f3[i])
-                func1 = pg.PlotCurveItem(pen=pg.mkPen((255,0,0,50), width=20))
-                #func2 = pg.PlotCurveItem(pen=pg.mkPen((255,0,0,50), width=20))
-                func3 = pg.PlotCurveItem(pen=pg.mkPen((255,0,0,50), width=20))
-                func1.setData(t_e, fr_e)
-                #func2.setData(t_e, ft_e)
-                func3.setData(t_e, fo_e)
-                self.graphicsView.addItem(func1)
-                #self.graphicsView_2.addItem(func2)
-                self.graphicsView_3.addItem(func3)
-                self.r_error_funcs.append(func1)
-                #self.theta_error_funcs.append(func2)
-                self.offset_error_funcs.append(func3)
+        elif self.space_of_instruction == 0:
+            t, f1, p, vib, fil = calculate_route(self.route)
+            t, f2, p, vib, fil = calculate_route(self.route2)
+            t, f3, p, vib, fil = calculate_route(self.route3)
+            error = []
+            for i in range(len(t)):
+                try:
+                    get_x_z_alpha(f1[i], f2[i], f3[i])
+                except:
+                    possible = False
+                    error.append(i)
+            if possible:
+                self.goToCoursorButton.setEnabled(True)
+                self.seeMotorRefsButton.setEnabled(True)
+            else:
+                all_areas = []
+                last_area = []
+                for i in range(len(error)):
+                    last_area.append(error[i])
+                    if i < len(error) - 1:
+                        if error[i + 1] - 1 != error[i]:
+                            all_areas.append(last_area)
+                            last_area = []
+                if len(last_area):
+                    all_areas.append(last_area)
+                for area in all_areas:
+                    t_e = []
+                    fr_e = []
+                    #ft_e = []
+                    fo_e = []
+                    for i in area:
+                        t_e.append(t[i])
+                        fr_e.append(f1[i])
+                        #ft_e.append(f2[i])
+                        fo_e.append(f3[i])
+                    func1 = pg.PlotCurveItem(pen=pg.mkPen((255,0,0,50), width=20))
+                    #func2 = pg.PlotCurveItem(pen=pg.mkPen((255,0,0,50), width=20))
+                    func3 = pg.PlotCurveItem(pen=pg.mkPen((255,0,0,50), width=20))
+                    func1.setData(t_e, fr_e)
+                    #func2.setData(t_e, ft_e)
+                    func3.setData(t_e, fo_e)
+                    self.graphicsView.addItem(func1)
+                    #self.graphicsView_2.addItem(func2)
+                    self.graphicsView_3.addItem(func3)
+                    self.r_error_funcs.append(func1)
+                    #self.theta_error_funcs.append(func2)
+                    self.offset_error_funcs.append(func3)
 
     def closeEvent(self, a0: QtGui.QCloseEvent):
         '''
@@ -815,7 +847,7 @@ class Window(QMainWindow, PlotWindow):
 
     def add_correction(self):
         data = [0,0,0,0,0,0,0,0,0,0]
-        dlg = CorrectionForm(parent=self, data=data)
+        dlg = CorrectionForm(parent=self, data=data, space=self.space_of_instruction)
         dlg.setWindowTitle("Add correction to states")
         if dlg.exec():
             r_dis = data[0]
@@ -883,7 +915,7 @@ class Window(QMainWindow, PlotWindow):
             self.reprint_plot_1()
 
     def see_motor_refs(self):
-        plotwin = PassivePlotWindow(self.app, self.route, self.route2, self.route3, parent=self)
+        plotwin = PassivePlotWindow(self.app, self.route, self.route2, self.route3, parent=self, space=self.space_of_instruction)
         if plotwin.problem:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
@@ -905,10 +937,11 @@ class Window(QMainWindow, PlotWindow):
         for i in range(len(self.route5['notes'])):
             t = self.route5['notes'][i][0]
             n = self.route5['notes'][i][1]
-            self.add_item(0, 0, [t, LOOK_UP_TABLE[n]['r']])
-            self.add_item(1, 0, [t, LOOK_UP_TABLE[n]['theta']])
-            self.add_item(2, 0, [t, LOOK_UP_TABLE[n]['offset']])
-            self.add_item(3, 0, [t, LOOK_UP_TABLE[n]['flow']])
+            self.add_item(0, 0, [t, LOOK_UP_TABLE[n]['r']], from_func=True)
+            self.add_item(1, 0, [t, LOOK_UP_TABLE[n]['theta']], from_func=True)
+            self.add_item(2, 0, [t, LOOK_UP_TABLE[n]['offset']], from_func=True)
+            self.add_item(3, 0, [t, LOOK_UP_TABLE[n]['flow']], from_func=True)
+        self.changes_made()
 
     def move_coursor(self, value):
         t = self.route['total_t'] * value / 99
@@ -2321,8 +2354,9 @@ class Window(QMainWindow, PlotWindow):
                 self.route5['history'].append(['delete_note', p])
             self.reprint_plot_5()
 
-    def add_item(self, func, prop, params):
-        self.changes_made()
+    def add_item(self, func, prop, params, from_func=False):
+        if not from_func:
+            self.changes_made()
         if func == 0:
             if prop == 0:
                 self.route['points'].append(params)
